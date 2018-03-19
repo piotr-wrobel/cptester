@@ -5,9 +5,11 @@ PLOT	= $fff0						; Funkcja PLOT z KERNAL (ustawienie kursora)
 CHROUT	= $ffd2						; Funkcja CHROUT z KERNAL (wypisanie znaku na aktualnej pozycji kursora)
 stradrr = $FB						; Miejsce na stronie zerowej, na wskaźnik do wypisywanego stringa
 stop 	= $91						; Adres na mapie C64 - można z niego odczytać status klawisza RUN/STOP #$7F
+stop_pressed	= $7f
 port2 	= $dc00						; Adres Control Port 2
 port1 	= $dc01						; Adres Control Port 1
 ekran 	= $400						; Adres początku ekranu tekstowego
+cls_code = 147						; Kod czyszczenia ekranu
 
 wiersz 	= 40							; Długość wiersza ekranu
 j1p 	= ekran+(wiersz*6)+13		; Wyznaczenie środka wizualizacji stanu joysticka na porcie 1
@@ -22,9 +24,11 @@ poziomy_d	= 114					; Kod znaku odwrotnego do powyższego
 fire_on		= 81						; Kod znaku pełnego kółeczka
 fire_off	= 87						; Kod znaku pustego kółeczka
 
-key_home	= 19
-key_right	= 29
-key_down	= 17
+up		= $01
+down	= $02
+left	= $04
+right	= $08
+fire	= $10
 
 
   jsr cls
@@ -33,55 +37,55 @@ key_down	= 17
   lda #powitanie&255		; Pod adres stradrr wrzucany wskaznik do napisu
   sta stradrr
   lda #powitanie/256
-  sta stradrr+1
+  sta [stradrr + 1]
   jsr putmsg_xy
   ldx #22			; Ustawienie wiersza
   ldy #0			; Ustawienie kolumny
   lda #wyjscie&255		; Pod adres stradrr wrzucany wskaznik do napisu
   sta stradrr
   lda #wyjscie/256
-  sta stradrr+1
+  sta [stradrr + 1]
   jsr putmsg_xy  
 loop:
-  lda port2
-  tax
-  and #$01
+  ldx port2
+  txa
+  and #up
   bne e1
   lda #poziomy_g
   jmp e2
 e1:
   lda #poziomy
 e2:
-  sta j2p-wiersz 
+  sta [j2p - wiersz] 
   txa 
-  and #$02
+  and #down
   bne e3
   lda #poziomy_d
   jmp e4
 e3:
   lda #poziomy
 e4:
-  sta j2p+wiersz 
+  sta [j2p + wiersz] 
   txa 
-  and #$04
+  and #left
   bne e5
   lda #pionowy_l
   jmp e6
 e5:
   lda #pionowy
 e6:
-  sta j2p-1 
+  sta [j2p - 1] 
   txa 
-  and #$08
+  and #right
   bne e7
   lda #pionowy_p
   jmp e8
 e7:
   lda #pionowy
 e8:
-  sta j2p+1 
+  sta [j2p + 1] 
   txa 
-  and #$10
+  and #fire
   bne e9
   lda #fire_on
   jmp e10
@@ -90,45 +94,45 @@ e9:
 e10:
   sta j2p 
 
-  lda port1
-  tax
-  and #$01
+  ldx port1
+  txa
+  and #up
   bne e11
   lda #poziomy_g
   jmp e12
 e11:
   lda #poziomy
 e12:
-  sta j1p-wiersz 
+  sta [j1p - wiersz] 
   txa 
-  and #$02
+  and #down
   bne e13
   lda #poziomy_d
   jmp e14
 e13:
   lda #poziomy
 e14:
-  sta j1p+wiersz 
+  sta [j1p + wiersz] 
   txa 
-  and #$04
+  and #left
   bne e15
   lda #pionowy_l
   jmp e16
 e15:
   lda #pionowy
 e16:
-  sta j1p-1 
+  sta [j1p - 1] 
   txa 
-  and #$08
+  and #right
   bne e17
   lda #pionowy_p
   jmp e18
 e17:
   lda #pionowy
 e18:
-  sta j1p+1 
+  sta [j1p + 1] 
   txa 
-  and #$10
+  and #fire
   bne e19
   lda #fire_on
   jmp e20
@@ -136,11 +140,13 @@ e19:
   lda #fire_off
 e20:
   sta j1p
+e21:
   lda stop
-  cmp #$7f
+  cmp #stop_pressed
   beq koniec 
   jmp loop
 koniec:
+  jsr cls
   rts
  
  ; ********** Funkcje dodatkowe *******************
@@ -159,17 +165,22 @@ putmsg .SUBROUTINE 			; Wypisanie stringa na ekran od aktualnej pozycji kursora
   iny
   jmp .loop
  
+; cls .SUBROUTINE				; Procedurka czyszczenia ekranu
+  ; ldx #$00
+  ; lda #$20
+; .loop:  
+  ; sta ekran,x
+  ; sta ekran+$100,x
+  ; sta ekran+$200,x
+  ; sta ekran+$300,x
+  ; dex
+  ; bne .loop
+  ; rts
+  
 cls .SUBROUTINE				; Procedurka czyszczenia ekranu
-  ldx #$00
-  lda #$20
-.loop:  
-  sta ekran,x
-  sta ekran+$100,x
-  sta ekran+$200,x
-  sta ekran+$300,x
-  dex
-  bne .loop
-  rts
+  lda #cls_code
+  jsr CHROUT
+  rts  
 
 powitanie 	.DC "*** CP TESTER V.3 ***",0				; Nazwa programu
 wyjscie		.DC "PRESS STOP KEY TO EXIT...",0
