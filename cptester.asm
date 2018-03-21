@@ -52,7 +52,7 @@ loop:
   and #up
   bne e1
   lda #poziomy_g
-  jmp e2
+  bne e2
 e1:
   lda #poziomy
 e2:
@@ -61,7 +61,7 @@ e2:
   and #down
   bne e3
   lda #poziomy_d
-  jmp e4
+  bne e4
 e3:
   lda #poziomy
 e4:
@@ -70,7 +70,7 @@ e4:
   and #left
   bne e5
   lda #pionowy_l
-  jmp e6
+  bne e6
 e5:
   lda #pionowy
 e6:
@@ -79,7 +79,7 @@ e6:
   and #right
   bne e7
   lda #pionowy_p
-  jmp e8
+  bne e8
 e7:
   lda #pionowy
 e8:
@@ -88,7 +88,7 @@ e8:
   and #fire
   bne e9
   lda #fire_on
-  jmp e10
+  bne e10
 e9:
   lda #fire_off
 e10:
@@ -98,8 +98,10 @@ e10:
   txa
   and #up
   bne e11
+;halfloop:
+  ;beq loop				;To sie wykona tylko gdy skok z samego dołu pod etykietę :)
   lda #poziomy_g
-  jmp e12
+  bne e12
 e11:
   lda #poziomy
 e12:
@@ -108,7 +110,7 @@ e12:
   and #down
   bne e13
   lda #poziomy_d
-  jmp e14
+  bne e14
 e13:
   lda #poziomy
 e14:
@@ -117,7 +119,7 @@ e14:
   and #left
   bne e15
   lda #pionowy_l
-  jmp e16
+  bne e16
 e15:
   lda #pionowy
 e16:
@@ -126,7 +128,7 @@ e16:
   and #right
   bne e17
   lda #pionowy_p
-  jmp e18
+  bne e18
 e17:
   lda #pionowy
 e18:
@@ -135,7 +137,7 @@ e18:
   and #fire
   bne e19
   lda #fire_on
-  jmp e20
+  bne e20
 e19:
   lda #fire_off
 e20:
@@ -158,12 +160,12 @@ putmsg .SUBROUTINE 			; Wypisanie stringa na ekran od aktualnej pozycji kursora
   ldy #$00
 .loop: 
   lda (stradrr),y
-  bne .wypisz
-  rts
-.wypisz:
+  beq .koniec
   jsr CHROUT
   iny
-  jmp .loop
+  bne .loop
+.koniec
+  rts
  
 ; cls .SUBROUTINE				; Procedurka czyszczenia ekranu
   ; ldx #$00
