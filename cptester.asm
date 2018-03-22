@@ -31,125 +31,106 @@ right	= $08
 fire	= $10
 
 
-  jsr cls
-  ldx #2			; Ustawienie wiersza
-  ldy #9			; Ustawienie kolumny
+  ;jsr cls
+  lda #cls_code				; Czyszczenie ekranu inline
+  jsr CHROUT
+  ldx #2					; Ustawienie wiersza
+  ldy #9					; Ustawienie kolumny
   lda #powitanie&255		; Pod adres stradrr wrzucany wskaznik do napisu
   sta stradrr
   lda #powitanie/256
   sta [stradrr + 1]
   jsr putmsg_xy
-  ldx #22			; Ustawienie wiersza
-  ldy #0			; Ustawienie kolumny
-  lda #wyjscie&255		; Pod adres stradrr wrzucany wskaznik do napisu
+  ldx #22					; Ustawienie wiersza
+  ldy #0					; Ustawienie kolumny
+  lda #wyjscie&255			; Pod adres stradrr wrzucany wskaznik do napisu
   sta stradrr
   lda #wyjscie/256
   sta [stradrr + 1]
   jsr putmsg_xy  
 loop:
   ldx port2
+  ldy #poziomy_g
   txa
   and #up
-  bne e1
-  lda #poziomy_g
-  bne e2
+  beq e1
+  ldy #poziomy
 e1:
-  lda #poziomy
-e2:
-  sta [j2p - wiersz] 
+  sty [j2p - wiersz] 
+  ldy #poziomy_d
   txa 
   and #down
-  bne e3
-  lda #poziomy_d
-  bne e4
-e3:
-  lda #poziomy
-e4:
-  sta [j2p + wiersz] 
+  beq e2
+  ldy #poziomy
+e2:
+  sty [j2p + wiersz] 
+  ldy #pionowy_l
   txa 
   and #left
-  bne e5
-  lda #pionowy_l
-  bne e6
-e5:
-  lda #pionowy
-e6:
-  sta [j2p - 1] 
+  beq e3
+  ldy #pionowy
+e3:
+  sty [j2p - 1] 
+  ldy #pionowy_p
   txa 
   and #right
-  bne e7
-  lda #pionowy_p
-  bne e8
-e7:
-  lda #pionowy
-e8:
-  sta [j2p + 1] 
+  beq e4
+  ldy #pionowy
+e4:
+  sty [j2p + 1] 
+  ldy #fire_on
   txa 
   and #fire
-  bne e9
-  lda #fire_on
-  bne e10
-e9:
-  lda #fire_off
-e10:
-  sta j2p 
+  beq e5
+  ldy #fire_off
+e5:
+  sty j2p 
 
   ldx port1
+  ldy #poziomy_g
   txa
   and #up
-  bne e11
-;halfloop:
-  ;beq loop				;To sie wykona tylko gdy skok z samego dołu pod etykietę :)
-  lda #poziomy_g
-  bne e12
-e11:
-  lda #poziomy
-e12:
-  sta [j1p - wiersz] 
+  beq e6
+  ldy #poziomy
+e6:
+  sty [j1p - wiersz] 
+  ldy #poziomy_d
   txa 
   and #down
-  bne e13
-  lda #poziomy_d
-  bne e14
-e13:
-  lda #poziomy
-e14:
-  sta [j1p + wiersz] 
+  beq e7
+  ldy #poziomy
+e7:
+  sty [j1p + wiersz] 
+  ldy #pionowy_l
   txa 
   and #left
-  bne e15
-  lda #pionowy_l
-  bne e16
-e15:
-  lda #pionowy
-e16:
-  sta [j1p - 1] 
+  beq e8
+  ldy #pionowy
+e8:
+  sty [j1p - 1] 
+  ldy #pionowy_p
   txa 
   and #right
-  bne e17
-  lda #pionowy_p
-  bne e18
-e17:
-  lda #pionowy
-e18:
-  sta [j1p + 1] 
+  beq e9
+  ldy #pionowy
+e9:
+  sty [j1p + 1] 
+  ldy #fire_on
   txa 
   and #fire
-  bne e19
-  lda #fire_on
-  bne e20
-e19:
-  lda #fire_off
-e20:
-  sta j1p
-e21:
+  beq e10
+  ldy #fire_off
+e10:
+  sty j1p
   lda stop
   cmp #stop_pressed
   beq koniec 
   jmp loop
 koniec:
-  jsr cls
-  rts
+  ;jsr cls
+  lda #cls_code		; Czyszczenie ekranu inline
+  jmp CHROUT
+  ;rts
  
  ; ********** Funkcje dodatkowe *******************
  
@@ -168,21 +149,21 @@ putmsg .SUBROUTINE 			; Wypisanie stringa na ekran od aktualnej pozycji kursora
   rts
  
 ; cls .SUBROUTINE				; Procedurka czyszczenia ekranu
-  ; ldx #$00
-  ; lda #$20
+;   ldx #$00
+;   lda #$20
 ; .loop:  
-  ; sta ekran,x
-  ; sta ekran+$100,x
-  ; sta ekran+$200,x
-  ; sta ekran+$300,x
-  ; dex
-  ; bne .loop
-  ; rts
+;   sta ekran,x
+;   sta ekran+$100,x
+;   sta ekran+$200,x
+;   sta ekran+$300,x
+;   dex
+;   bne .loop
+;   rts
   
-cls .SUBROUTINE				; Procedurka czyszczenia ekranu
-  lda #cls_code
-  jsr CHROUT
-  rts  
+;cls .SUBROUTINE				; Procedurka czyszczenia ekranu w KERNAL
+;  lda #cls_code
+;  jsr CHROUT
+;  rts  
 
 powitanie 	.DC "*** CP TESTER V.3 ***",0				; Nazwa programu
 wyjscie		.DC "PRESS STOP KEY TO EXIT...",0
