@@ -1,28 +1,29 @@
- processor 6502						;Procesor 6510, 6502, 8500 - C64
+ processor 6502				;Procesor 6510, 6502, 8500 - C64
  org $1000
  
-PLOT	= $fff0						; Funkcja PLOT z KERNAL (ustawienie kursora)
-CHROUT	= $ffd2						; Funkcja CHROUT z KERNAL (wypisanie znaku na aktualnej pozycji kursora)
-zero_tmp = $FB						; Miejsce na stronie zerowej, na wskaźnik do wypisywanego stringa
-stop 	= $91						; Adres na mapie C64 - można z niego odczytać status klawisza RUN/STOP #$7F
+PLOT	= $fff0				; Funkcja PLOT z KERNAL (ustawienie kursora)
+CHROUT	= $ffd2				; Funkcja CHROUT z KERNAL (wypisanie znaku na aktualnej pozycji kursora)
+zero_tmp = $FB				; Miejsce na stronie zerowej, na wskaźnik do wypisywanego stringa
+stop 	= $91				; Adres na mapie C64 - można z niego odczytać status klawisza RUN/STOP #$7F
 stop_pressed	= $7f
-port2 	= $dc00						; Adres Control Port 2
-port1 	= $dc01						; Adres Control Port 1
-ekran 	= $400						; Adres początku ekranu tekstowego
-cls_code = 147						; Kod czyszczenia ekranu
+port2 	= $dc00				; Adres Control Port 2
+port1 	= $dc01				; Adres Control Port 1
+ekran 	= $400				; Adres początku ekranu tekstowego
+cls_code = 147				; Kod czyszczenia ekranu
 
-wiersz 	= 40							; Długość wiersza ekranu
-j1p 	= ekran+(wiersz*8)+13		; Wyznaczenie środka wizualizacji stanu joysticka na porcie 1
-j2p 	= ekran+(wiersz*8)+25		; Wyznaczenie środka wizualizacji stanu joysticka na porcie 2
+wwierszu 	= 40							; Długość wiersza ekranu
+wiersz 		= 8
+j1p 	= ekran+(wwierszu*wiersz)+13		; Wyznaczenie środka wizualizacji stanu joysticka na porcie 1
+j2p 	= ekran+(wwierszu*wiersz)+25		; Wyznaczenie środka wizualizacji stanu joysticka na porcie 2
 
-pionowy		= 66						; Kod znaku lini pionowej
-poziomy		= 67						; Kod znaku lini poziomej
-pionowy_l	= 115					; Kod znaku -|
-pionowy_p	= 107					; Kod znaku |-
-poziomy_g	= 113					; Kod znaku _|_
-poziomy_d	= 114					; Kod znaku odwrotnego do powyższego
-fire_on		= 81						; Kod znaku pełnego kółeczka
-fire_off	= 87						; Kod znaku pustego kółeczka
+pionowy		= 66			; Kod znaku lini pionowej
+poziomy		= 67			; Kod znaku lini poziomej
+pionowy_l	= 115			; Kod znaku -|
+pionowy_p	= 107			; Kod znaku |-
+poziomy_g	= 113			; Kod znaku _|_
+poziomy_d	= 114			; Kod znaku odwrotnego do powyższego
+fire_on		= 81			; Kod znaku pełnego kółeczka
+fire_off	= 87			; Kod znaku pustego kółeczka
 
 up		= $01
 down	= $02
@@ -30,31 +31,29 @@ left	= $04
 right	= $08
 fire	= $10
 
-
-  ;jsr cls
   lda #cls_code				; Czyszczenie ekranu inline
   jsr CHROUT
   ldx #2					; Ustawienie wiersza
   ldy #9					; Ustawienie kolumny
-  lda #powitanie&255		; Pod adres zero_tmp wrzucany wskaznik do napisu
+  lda #<powitanie			; Pod adres zero_tmp wrzucany wskaznik do napisu
   sta zero_tmp
-  lda #powitanie/256
+  lda #>powitanie
   sta [zero_tmp + 1]
   jsr putmsg_xy
   ldx #5					; Ustawienie wiersza
   ldy #10					; Ustawienie kolumny
-  lda #opis&255		; Pod adres zero_tmp wrzucany wskaznik do napisu
+  lda #<opis				; Pod adres zero_tmp wrzucany wskaznik do napisu
   sta zero_tmp
-  lda #opis/256
+  lda #>opis
   sta [zero_tmp + 1]
   jsr putmsg_xy  
   ldx #22					; Ustawienie wiersza
   ldy #0					; Ustawienie kolumny
-  lda #wyjscie&255			; Pod adres zero_tmp wrzucany wskaznik do napisu
+  lda #<wyjscie				; Pod adres zero_tmp wrzucany wskaznik do napisu
   sta zero_tmp
-  lda #wyjscie/256
+  lda #>wyjscie
   sta [zero_tmp + 1]
-  jsr putmsg_xy  
+  jsr putmsg_xy
 loop:  						; Pętla główna
   ldy #9					; Ilość przebiegów pętli sprawdzającej *2 / 10*2
   lda port1					
@@ -88,11 +87,12 @@ ustawiony:
   beq koniec 
   jmp loop
 koniec:
-  lda #cls_code		; Czyszczenie ekranu inline
-  jmp CHROUT
+  lda #cls_code				; Czyszczenie ekranu inline
+  jmp CHROUT				; Skok do funkcji KERNALA, ta zakończy się RTS i wyjście do BASICA
 
   
-  ; ********** Funkcje dodatkowe *******************
+; ********** Funkcje dodatkowe *******************
+
 putmsg_xy .SUBROUTINE		; Wypisanie stringa na ekran od zdefiniowanej X,Y pozycji kursora
   clc 
   jsr PLOT
@@ -107,12 +107,14 @@ putmsg .SUBROUTINE 			; Wypisanie stringa na ekran od aktualnej pozycji kursora
 .koniec
   rts
 
-pozycje		.DC [[j2p]&255],[[j2p + 1]&255],[[j2p - 1]&255],[[j2p + wiersz]&255],[[j2p - wiersz]&255]
-			.DC     [[j1p]&255],[[j1p + 1]&255],[[j1p - 1]&255],[[j1p + wiersz]&255],[[j1p - wiersz]&255]
+; ********* Dane w pamięci ***************
+
+pozycje		.DC #<j2p,#<[j2p + 1],#<[j2p - 1],#<[j2p + wwierszu],#<[j2p - wwierszu]
+			.DC #<[j1p],#<[j1p + 1],#<[j1p - 1],#<[j1p + wwierszu],#<[j1p - wwierszu]
 stany_on	.DC fire_on,pionowy_p,pionowy_l,poziomy_d,poziomy_g
 			.DC     fire_on,pionowy_p,pionowy_l,poziomy_d,poziomy_g
 stany_off	.DC fire_off,pionowy,pionowy,poziomy,poziomy
 			.DC     fire_off,pionowy,pionowy,poziomy,poziomy			
-powitanie 	.DC "*** CP TESTER V.4 ***",0				; Nazwa programu
-opis		.DC   "PORT #1     PORT #2",0
+powitanie 	.DC "*** CP TESTER V.4 ***",0				;Napisy na ekranie
+opis		.DC "PORT #1     PORT #2",0
 wyjscie		.DC "PRESS STOP KEY TO EXIT...",0
