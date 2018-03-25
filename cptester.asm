@@ -12,8 +12,8 @@ ekran 	= $400						; Adres początku ekranu tekstowego
 cls_code = 147						; Kod czyszczenia ekranu
 
 wiersz 	= 40							; Długość wiersza ekranu
-j1p 	= ekran+(wiersz*6)+13		; Wyznaczenie środka wizualizacji stanu joysticka na porcie 1
-j2p 	= ekran+(wiersz*6)+25		; Wyznaczenie środka wizualizacji stanu joysticka na porcie 2
+j1p 	= ekran+(wiersz*8)+13		; Wyznaczenie środka wizualizacji stanu joysticka na porcie 1
+j2p 	= ekran+(wiersz*8)+25		; Wyznaczenie środka wizualizacji stanu joysticka na porcie 2
 
 pionowy		= 66						; Kod znaku lini pionowej
 poziomy		= 67						; Kod znaku lini poziomej
@@ -49,33 +49,32 @@ fire	= $10
   sta [zero_tmp + 1]
   jsr putmsg_xy  
 loop:  						; Pętla główna
-  ldy #20					; Ilość przebiegów pętli sprawdzającej *2 / 10*2
+  ldy #9					; Ilość przebiegów pętli sprawdzającej *2 / 10*2
   lda port1					
   sta zero_tmp+2			; Zachowujemy zawartosc portu, do badania kolejnych bitow w zero_tmp+2
 zapisz:  
-  cpy #10					; Jeżeli jesteśmy w połowie pętli, to zachowujemy zawartosc drugiego portu, pierwszy jest przeanalizowany
+  cpy #4
   bne omin
-  lda port2
+  lda port2					; Jeżeli jesteśmy w połowie pętli, to zachowujemy zawartosc drugiego portu, pierwszy jest przeanalizowany
   sta zero_tmp+2
 omin:
-  ldx stany,Y				; Juz tutaj ładujemy do X odwzorowanie stanu aktywnego pola wynikajacego z indeksu Y
+  ldx stany_on,y			; Juz tutaj ładujemy do X odwzorowanie stanu aktywnego pola wynikajacego z indeksu Y
   lda #01					; Testujemy najmlodszy bit, pozniej przesuniemy w prawo
   and zero_tmp+2
   beq ustawiony
 pusty:
-  ldx stany+1,Y				; Jednak stan nie jest aktywny, nadpisujemy odpowiednim stanem do odwzorowania na ekranie
+  ldx stany_off,y			; Jednak stan nie jest aktywny, nadpisujemy odpowiednim stanem do odwzorowania na ekranie
 ustawiony:
-  ror zero_tmp+2
-  lda pozycje,Y
+  lsr zero_tmp+2			; Przesuwamy w pracy, by następnym razem sprawdzić kolejny bit
+  lda pozycje,y				; Ustawiamy na stronie zerowej adres na ekranie, gdzie wyświetlamy odwzorowanie
   sta zero_tmp
-  lda pozycje+1,Y
+  lda #$05
   sta zero_tmp+1
-  txa
-  ldx #$00
-  sta (zero_tmp,X)
+  txa						; Do akumlatora przesuwamy z X ustawiony wcześniej symbol odwzorowania stanu
+  ldx #$00					; Ładujemy 0 do X, żeby wykorzystać zapis indeksowany (bez przesunięcia) typu indirect
+  sta (zero_tmp,x)			; Na ekran przygotowany symbol
   dey
-  dey
-  bne zapisz 
+  bpl zapisz 				; Jeżeli indeks nieujemny to zapętlamy
   
   lda stop
   cmp #stop_pressed
@@ -101,9 +100,11 @@ putmsg .SUBROUTINE 			; Wypisanie stringa na ekran od aktualnej pozycji kursora
 .koniec
   rts
 
-pozycje		.DC 0,0,[[j2p]&255],[[j2p]/256],[[j2p + 1]&255],[[j2p + 1]/256],[[j2p - 1]&255],[[j2p - 1]/256],[[j2p + wiersz]&255],[[j2p + wiersz]/256],[[j2p - wiersz]&255],[[j2p - wiersz]/256]
-			.DC     [[j1p]&255],[[j1p]/256],[[j1p + 1]&255],[[j1p + 1]/256],[[j1p - 1]&255],[[j1p - 1]/256],[[j1p + wiersz]&255],[[j1p + wiersz]/256],[[j1p - wiersz]&255],[[j1p - wiersz]/256]
-stany		.DC 0,0,fire_on,fire_off,pionowy_p,pionowy,pionowy_l,pionowy,poziomy_d,poziomy,poziomy_g,poziomy
-			.DC     fire_on,fire_off,pionowy_p,pionowy,pionowy_l,pionowy,poziomy_d,poziomy,poziomy_g,poziomy
+pozycje		.DC [[j2p]&255],[[j2p + 1]&255],[[j2p - 1]&255],[[j2p + wiersz]&255],[[j2p - wiersz]&255]
+			.DC     [[j1p]&255],[[j1p + 1]&255],[[j1p - 1]&255],[[j1p + wiersz]&255],[[j1p - wiersz]&255]
+stany_on	.DC fire_on,pionowy_p,pionowy_l,poziomy_d,poziomy_g
+			.DC     fire_on,pionowy_p,pionowy_l,poziomy_d,poziomy_g
+stany_off	.DC fire_off,pionowy,pionowy,poziomy,poziomy
+			.DC     fire_off,pionowy,pionowy,poziomy,poziomy			
 powitanie 	.DC "*** CP TESTER V.3 ***",0				; Nazwa programu
 wyjscie		.DC "PRESS STOP KEY TO EXIT...",0
