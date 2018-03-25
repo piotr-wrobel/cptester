@@ -41,6 +41,13 @@ fire	= $10
   lda #powitanie/256
   sta [zero_tmp + 1]
   jsr putmsg_xy
+  ldx #5					; Ustawienie wiersza
+  ldy #10					; Ustawienie kolumny
+  lda #opis&255		; Pod adres zero_tmp wrzucany wskaznik do napisu
+  sta zero_tmp
+  lda #opis/256
+  sta [zero_tmp + 1]
+  jsr putmsg_xy  
   ldx #22					; Ustawienie wiersza
   ldy #0					; Ustawienie kolumny
   lda #wyjscie&255			; Pod adres zero_tmp wrzucany wskaznik do napisu
@@ -106,5 +113,6 @@ stany_on	.DC fire_on,pionowy_p,pionowy_l,poziomy_d,poziomy_g
 			.DC     fire_on,pionowy_p,pionowy_l,poziomy_d,poziomy_g
 stany_off	.DC fire_off,pionowy,pionowy,poziomy,poziomy
 			.DC     fire_off,pionowy,pionowy,poziomy,poziomy			
-powitanie 	.DC "*** CP TESTER V.3 ***",0				; Nazwa programu
+powitanie 	.DC "*** CP TESTER V.4 ***",0				; Nazwa programu
+opis		.DC   "PORT #1     PORT #2",0
 wyjscie		.DC "PRESS STOP KEY TO EXIT...",0
