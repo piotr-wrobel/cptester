@@ -3,7 +3,7 @@
  
 PLOT	= $fff0						; Funkcja PLOT z KERNAL (ustawienie kursora)
 CHROUT	= $ffd2						; Funkcja CHROUT z KERNAL (wypisanie znaku na aktualnej pozycji kursora)
-stradrr = $FB						; Miejsce na stronie zerowej, na wskaźnik do wypisywanego stringa
+zero_tmp = $FB						; Miejsce na stronie zerowej, na wskaźnik do wypisywanego stringa
 stop 	= $91						; Adres na mapie C64 - można z niego odczytać status klawisza RUN/STOP #$7F
 stop_pressed	= $7f
 port2 	= $dc00						; Adres Control Port 2
@@ -36,135 +36,74 @@ fire	= $10
   jsr CHROUT
   ldx #2					; Ustawienie wiersza
   ldy #9					; Ustawienie kolumny
-  lda #powitanie&255		; Pod adres stradrr wrzucany wskaznik do napisu
-  sta stradrr
+  lda #powitanie&255		; Pod adres zero_tmp wrzucany wskaznik do napisu
+  sta zero_tmp
   lda #powitanie/256
-  sta [stradrr + 1]
+  sta [zero_tmp + 1]
   jsr putmsg_xy
   ldx #22					; Ustawienie wiersza
   ldy #0					; Ustawienie kolumny
-  lda #wyjscie&255			; Pod adres stradrr wrzucany wskaznik do napisu
-  sta stradrr
+  lda #wyjscie&255			; Pod adres zero_tmp wrzucany wskaznik do napisu
+  sta zero_tmp
   lda #wyjscie/256
-  sta [stradrr + 1]
+  sta [zero_tmp + 1]
   jsr putmsg_xy  
-loop:
-  ldx port2
-  ldy #poziomy_g
+loop:  						; Pętla główna
+  ldy #20					; Ilość przebiegów pętli sprawdzającej *2 / 10*2
+  lda port1					
+  sta zero_tmp+2			; Zachowujemy zawartosc portu, do badania kolejnych bitow w zero_tmp+2
+zapisz:  
+  cpy #10					; Jeżeli jesteśmy w połowie pętli, to zachowujemy zawartosc drugiego portu, pierwszy jest przeanalizowany
+  bne omin
+  lda port2
+  sta zero_tmp+2
+omin:
+  ldx stany,Y				; Juz tutaj ładujemy do X odwzorowanie stanu aktywnego pola wynikajacego z indeksu Y
+  lda #01					; Testujemy najmlodszy bit, pozniej przesuniemy w prawo
+  and zero_tmp+2
+  beq ustawiony
+pusty:
+  ldx stany+1,Y				; Jednak stan nie jest aktywny, nadpisujemy odpowiednim stanem do odwzorowania na ekranie
+ustawiony:
+  ror zero_tmp+2
+  lda pozycje,Y
+  sta zero_tmp
+  lda pozycje+1,Y
+  sta zero_tmp+1
   txa
-  and #up
-  beq e1
-  ldy #poziomy
-e1:
-  sty [j2p - wiersz] 
-  ldy #poziomy_d
-  txa 
-  and #down
-  beq e2
-  ldy #poziomy
-e2:
-  sty [j2p + wiersz] 
-  ldy #pionowy_l
-  txa 
-  and #left
-  beq e3
-  ldy #pionowy
-e3:
-  sty [j2p - 1] 
-  ldy #pionowy_p
-  txa 
-  and #right
-  beq e4
-  ldy #pionowy
-e4:
-  sty [j2p + 1] 
-  ldy #fire_on
-  txa 
-  and #fire
-  beq e5
-  ldy #fire_off
-e5:
-  sty j2p 
-
-  ldx port1
-  ldy #poziomy_g
-  txa
-  and #up
-  beq e6
-  ldy #poziomy
-e6:
-  sty [j1p - wiersz] 
-  ldy #poziomy_d
-  txa 
-  and #down
-  beq e7
-  ldy #poziomy
-e7:
-  sty [j1p + wiersz] 
-  ldy #pionowy_l
-  txa 
-  and #left
-  beq e8
-  ldy #pionowy
-e8:
-  sty [j1p - 1] 
-  ldy #pionowy_p
-  txa 
-  and #right
-  beq e9
-  ldy #pionowy
-e9:
-  sty [j1p + 1] 
-  ldy #fire_on
-  txa 
-  and #fire
-  beq e10
-  ldy #fire_off
-e10:
-  sty j1p
+  ldx #$00
+  sta (zero_tmp,X)
+  dey
+  dey
+  bne zapisz 
+  
   lda stop
   cmp #stop_pressed
   beq koniec 
   jmp loop
 koniec:
-  ;jsr cls
   lda #cls_code		; Czyszczenie ekranu inline
   jmp CHROUT
-  ;rts
- 
- ; ********** Funkcje dodatkowe *******************
- 
+
+  
+  ; ********** Funkcje dodatkowe *******************
 putmsg_xy .SUBROUTINE		; Wypisanie stringa na ekran od zdefiniowanej X,Y pozycji kursora
   clc 
   jsr PLOT
 putmsg .SUBROUTINE 			; Wypisanie stringa na ekran od aktualnej pozycji kursora
   ldy #$00
 .loop: 
-  lda (stradrr),y
+  lda (zero_tmp),y
   beq .koniec
   jsr CHROUT
   iny
   bne .loop
 .koniec
   rts
- 
-; cls .SUBROUTINE				; Procedurka czyszczenia ekranu
-;   ldx #$00
-;   lda #$20
-; .loop:  
-;   sta ekran,x
-;   sta ekran+$100,x
-;   sta ekran+$200,x
-;   sta ekran+$300,x
-;   dex
-;   bne .loop
-;   rts
-  
-;cls .SUBROUTINE				; Procedurka czyszczenia ekranu w KERNAL
-;  lda #cls_code
-;  jsr CHROUT
-;  rts  
 
+pozycje		.DC 0,0,[[j2p]&255],[[j2p]/256],[[j2p + 1]&255],[[j2p + 1]/256],[[j2p - 1]&255],[[j2p - 1]/256],[[j2p + wiersz]&255],[[j2p + wiersz]/256],[[j2p - wiersz]&255],[[j2p - wiersz]/256]
+			.DC     [[j1p]&255],[[j1p]/256],[[j1p + 1]&255],[[j1p + 1]/256],[[j1p - 1]&255],[[j1p - 1]/256],[[j1p + wiersz]&255],[[j1p + wiersz]/256],[[j1p - wiersz]&255],[[j1p - wiersz]/256]
+stany		.DC 0,0,fire_on,fire_off,pionowy_p,pionowy,pionowy_l,pionowy,poziomy_d,poziomy,poziomy_g,poziomy
+			.DC     fire_on,fire_off,pionowy_p,pionowy,pionowy_l,pionowy,poziomy_d,poziomy,poziomy_g,poziomy
 powitanie 	.DC "*** CP TESTER V.3 ***",0				; Nazwa programu
 wyjscie		.DC "PRESS STOP KEY TO EXIT...",0
-;dane 		.DS 8,255
