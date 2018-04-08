@@ -1,5 +1,5 @@
  processor 6502				;Procesor 6510, 6502, 8500 - C64
- org $1000
+ org $0801
  
 PLOT	= $fff0				; Funkcja PLOT z KERNAL (ustawienie kursora)
 CHROUT	= $ffd2				; Funkcja CHROUT z KERNAL (wypisanie znaku na aktualnej pozycji kursora)
@@ -31,6 +31,27 @@ left	= $04
 right	= $08
 fire	= $10
 
+; ******* Poczatek w BASIC ******** 
+  .WORD basend,asmstart 	; Adres następnej linii w basicu, nr lini BASIC taki jak adres procedury (dla żartu)
+  .DC #$9e,(asmstart/1000)%10+$30,(asmstart/100)%10+$30,(asmstart/10)%10+$30,asmstart%10+$30 ; komenda SYS, czterocyfrowy adres procedury w ASCII
+  .DC #$00 					; koniec lini w BASIC
+basend:
+  .WORD #$0000 				; koniec programu w BASIC
+
+; ********* Dane w pamięci ***************
+
+pozycje		.DC #<j2p,#<[j2p + 1],#<[j2p - 1],#<[j2p + wwierszu],#<[j2p - wwierszu]
+			.DC #<[j1p],#<[j1p + 1],#<[j1p - 1],#<[j1p + wwierszu],#<[j1p - wwierszu]
+stany_on	.DC fire_on,pionowy_p,pionowy_l,poziomy_d,poziomy_g
+			.DC     fire_on,pionowy_p,pionowy_l,poziomy_d,poziomy_g
+stany_off	.DC fire_off,pionowy,pionowy,poziomy,poziomy
+			.DC     fire_off,pionowy,pionowy,poziomy,poziomy			
+powitanie 	.DC "*** CP TESTER V.4 ***",0				;Napisy na ekranie
+opis		.DC "PORT #1     PORT #2",0
+wyjscie		.DC "PRESS STOP KEY TO EXIT...",0
+
+; *********** Poczatek programu *************  
+asmstart:
   lda #cls_code				; Czyszczenie ekranu inline
   jsr CHROUT
   ldx #2					; Ustawienie wiersza
@@ -107,14 +128,3 @@ putmsg .SUBROUTINE 			; Wypisanie stringa na ekran od aktualnej pozycji kursora
 .koniec
   rts
 
-; ********* Dane w pamięci ***************
-
-pozycje		.DC #<j2p,#<[j2p + 1],#<[j2p - 1],#<[j2p + wwierszu],#<[j2p - wwierszu]
-			.DC #<[j1p],#<[j1p + 1],#<[j1p - 1],#<[j1p + wwierszu],#<[j1p - wwierszu]
-stany_on	.DC fire_on,pionowy_p,pionowy_l,poziomy_d,poziomy_g
-			.DC     fire_on,pionowy_p,pionowy_l,poziomy_d,poziomy_g
-stany_off	.DC fire_off,pionowy,pionowy,poziomy,poziomy
-			.DC     fire_off,pionowy,pionowy,poziomy,poziomy			
-powitanie 	.DC "*** CP TESTER V.4 ***",0				;Napisy na ekranie
-opis		.DC "PORT #1     PORT #2",0
-wyjscie		.DC "PRESS STOP KEY TO EXIT...",0
