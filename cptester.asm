@@ -49,9 +49,61 @@ stany_off	.DC fire_off,pionowy,pionowy,poziomy,poziomy
 powitanie 	.DC "*** CP TESTER V.4 ***",0				;Napisy na ekranie
 opis		.DC "PORT #1     PORT #2",0
 wyjscie		.DC "PRESS STOP KEY TO EXIT...",0
+tlo1		.DC #$00
+tlo2		.DC #$00
+tlo3		.DC #$00
+
 
 ; *********** Poczatek programu *************  
+
+Irq:	
+  LDA #<Irq2
+  STA $0314
+  LDA #>Irq2
+  STA $0315	;Re-direct next interrupt to Irq2 service routine
+  LDA #250
+  STA $D012	;Next interrupt to occur at raster line no. 0
+  lda $d021
+  sta $d020
+  ASL $D019	;"Acknowledge" the interrupt by clearing the VIC's interrupt flag.
+  JMP $EA31	;Jump to the beginning KERNAL's standard interrupt service routine.
+
+
+
+Irq2:	
+  LDA #<Irq
+  STA $0314
+  LDA #>Irq
+  STA $0315	;Re-direct next interrupt back to Irq
+  LDA #50
+  STA $D012	;Next interrupt to occur at raster line no. 210
+  lda [zero_tmp + 3]
+  sta $d020
+  ASL $D019	;"Acknowledge" the interrupt by clearing the VIC's interrupt flag.
+  JMP $EA81	;Jump to the final part of KERNAL's standard interrupt service routine.
+
+
+
+
 asmstart:
+  
+  LDA #%01111111
+  STA $DC0D	;"Switch off" interrupts signals from CIA-1
+  AND $D011
+  STA $D011	;Clear most significant bit in VIC's raster register
+  LDA #51
+  STA $D012	;Set the raster line number where interrupt should occur
+  LDA #<Irq
+  STA $0314
+  LDA #>Irq
+  STA $0315	;Set the interrupt vector to point to interrupt service routine below
+  lda $d020
+  sta [zero_tmp + 3]
+  sta tlo1
+  LDA #%00000001
+  STA $D01A	;Enable raster interrupt signals from VIC
+  
+  
   lda #cls_code				; Czyszczenie ekranu inline
   jsr CHROUT
   ldx #2					; Ustawienie wiersza
@@ -76,6 +128,8 @@ asmstart:
   sta [zero_tmp + 1]
   jsr putmsg_xy
 loop:  						; Pętla główna
+  lda tlo1
+  sta tlo3
   ldy #9					; Ilość przebiegów pętli sprawdzającej *2 / 10*2
   lda port1					
   sta zero_tmp+2			; Zachowujemy zawartosc portu, do badania kolejnych bitow w zero_tmp+2
@@ -86,13 +140,17 @@ zapisz:
   sta zero_tmp+2
 omin:
   ldx stany_on,y			; Juz tutaj ładujemy do X odwzorowanie stanu aktywnego pola wynikajacego z indeksu Y
+  lda $d021
+  sta tlo2
   lda #01					; Testujemy najmlodszy bit, pozniej przesuniemy w prawo
   and zero_tmp+2
   beq ustawiony
 pusty:
+  lda tlo1
+  sta tlo2
   ldx stany_off,y			; Jednak stan nie jest aktywny, nadpisujemy odpowiednim stanem do odwzorowania na ekranie
 ustawiony:
-  lsr zero_tmp+2			; Przesuwamy w pracy, by następnym razem sprawdzić kolejny bit
+  lsr zero_tmp+2			; Przesuwamy w prawo, by następnym razem sprawdzić kolejny bit
   lda pozycje,y				; Ustawiamy na stronie zerowej adres na ekranie, gdzie wyświetlamy odwzorowanie
   sta zero_tmp
   lda #$05
@@ -100,12 +158,19 @@ ustawiony:
   txa						; Do akumlatora przesuwamy z X ustawiony wcześniej symbol odwzorowania stanu
   ldx #$00					; Ładujemy 0 do X, żeby wykorzystać zapis indeksowany (bez przesunięcia) typu indirect
   sta (zero_tmp,x)			; Na ekran przygotowany symbol
+  lda tlo2
+  cmp tlo1 ;Nie wiem co tu dalej, trzeba sprawdzic, czy migamy tlem, czy nie ? w tlo2 mamy tlo 
+  beq bez_zmiany
+  sta tlo3
+bez_zmiany:
   dey
   bpl zapisz 				; Jeżeli indeks nieujemny to zapętlamy
   
   lda stop
   cmp #stop_pressed
   beq koniec 
+  lda tlo3
+  sta [zero_tmp + 3]
   jmp loop
 koniec:
   lda #cls_code				; Czyszczenie ekranu inline
