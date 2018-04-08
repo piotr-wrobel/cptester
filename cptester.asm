@@ -46,7 +46,7 @@ stany_on	.DC fire_on,pionowy_p,pionowy_l,poziomy_d,poziomy_g
 			.DC     fire_on,pionowy_p,pionowy_l,poziomy_d,poziomy_g
 stany_off	.DC fire_off,pionowy,pionowy,poziomy,poziomy
 			.DC     fire_off,pionowy,pionowy,poziomy,poziomy			
-powitanie 	.DC "*** CP TESTER V.4 ***",0				;Napisy na ekranie
+powitanie 	.DC "*** CP TESTER V.5 ***",0				;Napisy na ekranie
 opis		.DC "PORT #1     PORT #2",0
 wyjscie		.DC "PRESS STOP KEY TO EXIT...",0
 tlo1		.DC #$00
@@ -63,7 +63,7 @@ Irq:
   STA $0315	;Re-direct next interrupt to Irq2 service routine
   LDA #250
   STA $D012	;Next interrupt to occur at raster line no. 0
-  lda $d021
+  lda [zero_tmp + 3]
   sta $d020
   ASL $D019	;"Acknowledge" the interrupt by clearing the VIC's interrupt flag.
   JMP $EA31	;Jump to the beginning KERNAL's standard interrupt service routine.
@@ -77,7 +77,7 @@ Irq2:
   STA $0315	;Re-direct next interrupt back to Irq
   LDA #50
   STA $D012	;Next interrupt to occur at raster line no. 210
-  lda [zero_tmp + 3]
+  lda tlo1
   sta $d020
   ASL $D019	;"Acknowledge" the interrupt by clearing the VIC's interrupt flag.
   JMP $EA81	;Jump to the final part of KERNAL's standard interrupt service routine.
@@ -102,7 +102,7 @@ asmstart:
   sta tlo1
   LDA #%00000001
   STA $D01A	;Enable raster interrupt signals from VIC
-  
+
   
   lda #cls_code				; Czyszczenie ekranu inline
   jsr CHROUT
@@ -173,6 +173,16 @@ bez_zmiany:
   sta [zero_tmp + 3]
   jmp loop
 koniec:
+  LDA #%00000000
+  STA $D01A	;Disable raster interrupt signals from VIC
+  LDA #%11111111
+  STA $DC0D	;"Switch on" interrupts signals from CIA-1  
+  lda #$31
+  sta $0314
+  lda #$ea
+  sta $0315
+  lda tlo1
+  sta $d020
   lda #cls_code				; Czyszczenie ekranu inline
   jmp CHROUT				; Skok do funkcji KERNALA, ta zakończy się RTS i wyjście do BASICA
 
