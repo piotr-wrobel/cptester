@@ -9,12 +9,16 @@ stop_pressed	= $7f
 port2 	= $dc00				; Adres Control Port 2
 port1 	= $dc01				; Adres Control Port 1
 ekran 	= $400				; Adres początku ekranu tekstowego
+colory_ekran	= $d800		; Adres początku mapy kolorów ekranu
 cls_code = 147				; Kod czyszczenia ekranu
+kolor_aktywny = 4			; Fioletowy :)
 
 wwierszu 	= 40							; Długość wiersza ekranu
 wiersz 		= 8
 j1p 	= ekran+(wwierszu*wiersz)+13		; Wyznaczenie środka wizualizacji stanu joysticka na porcie 1
 j2p 	= ekran+(wwierszu*wiersz)+25		; Wyznaczenie środka wizualizacji stanu joysticka na porcie 2
+j1p_c 	= colory_ekran+(wwierszu*wiersz)+13		; Wyznaczenie środka wizualizacji stanu joysticka na porcie 1
+j2p_c 	= colory_ekran+(wwierszu*wiersz)+25		; Wyznaczenie środka wizualizacji stanu joysticka na porcie 2
 
 pionowy		= 66			; Kod znaku lini pionowej
 poziomy		= 67			; Kod znaku lini poziomej
@@ -40,68 +44,71 @@ basend:
 
 ; ********* Dane w pamięci ***************
 
-pozycje		.DC #<j2p,#<[j2p + 1],#<[j2p - 1],#<[j2p + wwierszu],#<[j2p - wwierszu]
-			.DC #<[j1p],#<[j1p + 1],#<[j1p - 1],#<[j1p + wwierszu],#<[j1p - wwierszu]
-stany_on	.DC fire_on,pionowy_p,pionowy_l,poziomy_d,poziomy_g
-			.DC     fire_on,pionowy_p,pionowy_l,poziomy_d,poziomy_g
-stany_off	.DC fire_off,pionowy,pionowy,poziomy,poziomy
-			.DC     fire_off,pionowy,pionowy,poziomy,poziomy			
-powitanie 	.DC "*** CP TESTER V.5 ***",0				;Napisy na ekranie
-opis		.DC "PORT #1     PORT #2",0
-wyjscie		.DC "PRESS STOP KEY TO EXIT...",0
-tlo1		.DC #$00
-tlo2		.DC #$00
-tlo3		.DC #$00
+pozycje					.DC #<j2p,#<[j2p + 1],#<[j2p - 1],#<[j2p + wwierszu],#<[j2p - wwierszu]
+						.DC #<[j1p],#<[j1p + 1],#<[j1p - 1],#<[j1p + wwierszu],#<[j1p - wwierszu]
+stany_on				.DC fire_on,pionowy_p,pionowy_l,poziomy_d,poziomy_g
+						.DC     fire_on,pionowy_p,pionowy_l,poziomy_d,poziomy_g
+stany_off				.DC fire_off,pionowy,pionowy,poziomy,poziomy
+						.DC     fire_off,pionowy,pionowy,poziomy,poziomy
+pozycje_c				.DC #<j2p_c,#<[j2p_c + 1],#<[j2p_c - 1],#<[j2p_c + wwierszu],#<[j2p_c - wwierszu]
+						.DC #<[j1p_c],#<[j1p_c + 1],#<[j1p_c - 1],#<[j1p_c + wwierszu],#<[j1p_c - wwierszu]			
+powitanie 				.DC "*** CP TESTER V.5 ***",0				;Napisy na ekranie
+opis					.DC "PORT #1     PORT #2",0
+wyjscie					.DC "PRESS STOP KEY TO EXIT...",0
+kolor_ramki				.DC #$00
+kolor_ramki_nowy		.DC #$00
+kolor_ramki_nowy_tmp	.DC #$00
+znak_c					.DC #$00
 
 
 ; *********** Poczatek programu *************  
 
-Irq:	
-  LDA #<Irq2
-  STA $0314
-  LDA #>Irq2
-  STA $0315	;Re-direct next interrupt to Irq2 service routine
-  LDA #250
-  STA $D012	;Next interrupt to occur at raster line no. 0
+irg_1:	
+  lda #<irg_2
+  sta $0314
+  lda #>irg_2
+  sta $0315	;Re-direct next interrupt to irg_2 service routine
+  lda #250
+  sta $d012	;Next interrupt to occur at raster line no. 0
   lda [zero_tmp + 3]
   sta $d020
-  ASL $D019	;"Acknowledge" the interrupt by clearing the VIC's interrupt flag.
-  JMP $EA31	;Jump to the beginning KERNAL's standard interrupt service routine.
+  asl $d019	;"Acknowledge" the interrupt by clearing the VIC's interrupt flag.
+  jmp $ea31	;Jump to the beginning KERNAL's standard interrupt service routine.
 
 
 
-Irq2:	
-  LDA #<Irq
-  STA $0314
-  LDA #>Irq
-  STA $0315	;Re-direct next interrupt back to Irq
-  LDA #50
-  STA $D012	;Next interrupt to occur at raster line no. 210
-  lda tlo1
+irg_2:	
+  lda #<irg_1
+  sta $0314
+  lda #>irg_1
+  sta $0315	;Re-direct next interrupt back to irg_1
+  lda #50
+  sta $d012	;Next interrupt to occur at raster line no. 210
+  lda kolor_ramki
   sta $d020
-  ASL $D019	;"Acknowledge" the interrupt by clearing the VIC's interrupt flag.
-  JMP $EA81	;Jump to the final part of KERNAL's standard interrupt service routine.
+  asl $d019	;"Acknowledge" the interrupt by clearing the VIC's interrupt flag.
+  jmp $ea81	;Jump to the final part of KERNAL's standard interrupt service routine.
 
 
 
 
 asmstart:
   
-  LDA #%01111111
-  STA $DC0D	;"Switch off" interrupts signals from CIA-1
-  AND $D011
-  STA $D011	;Clear most significant bit in VIC's raster register
-  LDA #51
-  STA $D012	;Set the raster line number where interrupt should occur
-  LDA #<Irq
-  STA $0314
-  LDA #>Irq
-  STA $0315	;Set the interrupt vector to point to interrupt service routine below
+  lda #%01111111
+  sta $dc0d	;"Switch off" interrupts signals from CIA-1
+  and $d011
+  sta $d011	;Clear most significant bit in VIC's raster register
+  lda #51
+  sta $d012	;Set the raster line number where interrupt should occur
+  lda #<irg_1
+  sta $0314
+  lda #>irg_1
+  sta $0315	;Set the interrupt vector to point to interrupt service routine below
   lda $d020
   sta [zero_tmp + 3]
-  sta tlo1
-  LDA #%00000001
-  STA $D01A	;Enable raster interrupt signals from VIC
+  sta kolor_ramki
+  lda #%00000001
+  sta $d01a	;Enable raster interrupt signals from VIC
 
   
   lda #cls_code				; Czyszczenie ekranu inline
@@ -128,8 +135,8 @@ asmstart:
   sta [zero_tmp + 1]
   jsr putmsg_xy
 loop:  						; Pętla główna
-  lda tlo1
-  sta tlo3
+  lda kolor_ramki
+  sta kolor_ramki_nowy_tmp
   ldy #9					; Ilość przebiegów pętli sprawdzającej *2 / 10*2
   lda port1					
   sta zero_tmp+2			; Zachowujemy zawartosc portu, do badania kolejnych bitow w zero_tmp+2
@@ -140,15 +147,19 @@ zapisz:
   sta zero_tmp+2
 omin:
   ldx stany_on,y			; Juz tutaj ładujemy do X odwzorowanie stanu aktywnego pola wynikajacego z indeksu Y
+  lda #kolor_aktywny
+  sta znak_c
   lda $d021
-  sta tlo2
+  sta kolor_ramki_nowy
   lda #01					; Testujemy najmlodszy bit, pozniej przesuniemy w prawo
   and zero_tmp+2
   beq ustawiony
 pusty:
-  lda tlo1
-  sta tlo2
+  lda kolor_ramki
+  sta kolor_ramki_nowy
   ldx stany_off,y			; Jednak stan nie jest aktywny, nadpisujemy odpowiednim stanem do odwzorowania na ekranie
+  lda colory_ekran+999		; Kolor ostatniego znaku, to kolor znaków przed uruchomieniem programu, tego znaku nie modyfikujemy
+  sta znak_c  
 ustawiony:
   lsr zero_tmp+2			; Przesuwamy w prawo, by następnym razem sprawdzić kolejny bit
   lda pozycje,y				; Ustawiamy na stronie zerowej adres na ekranie, gdzie wyświetlamy odwzorowanie
@@ -158,10 +169,18 @@ ustawiony:
   txa						; Do akumlatora przesuwamy z X ustawiony wcześniej symbol odwzorowania stanu
   ldx #$00					; Ładujemy 0 do X, żeby wykorzystać zapis indeksowany (bez przesunięcia) typu indirect
   sta (zero_tmp,x)			; Na ekran przygotowany symbol
-  lda tlo2
-  cmp tlo1 ;Nie wiem co tu dalej, trzeba sprawdzic, czy migamy tlem, czy nie ? w tlo2 mamy tlo 
+  
+  lda pozycje_c,y  
+  sta zero_tmp
+  lda #$d9
+  sta zero_tmp+1
+  lda znak_c
+  sta (zero_tmp,x)
+  
+  lda kolor_ramki_nowy
+  cmp kolor_ramki ;Nie wiem co tu dalej, trzeba sprawdzic, czy migamy tlem, czy nie ? w kolor_ramki_nowy mamy tlo 
   beq bez_zmiany
-  sta tlo3
+  sta kolor_ramki_nowy_tmp
 bez_zmiany:
   dey
   bpl zapisz 				; Jeżeli indeks nieujemny to zapętlamy
@@ -169,19 +188,19 @@ bez_zmiany:
   lda stop
   cmp #stop_pressed
   beq koniec 
-  lda tlo3
+  lda kolor_ramki_nowy_tmp
   sta [zero_tmp + 3]
   jmp loop
 koniec:
-  LDA #%00000000
-  STA $D01A	;Disable raster interrupt signals from VIC
-  LDA #%11111111
-  STA $DC0D	;"Switch on" interrupts signals from CIA-1  
+  lda #%00000000
+  sta $d01a	;Disable raster interrupt signals from VIC
+  lda #%11111111
+  sta $dc0d	;"Switch on" interrupts signals from CIA-1  
   lda #$31
   sta $0314
   lda #$ea
   sta $0315
-  lda tlo1
+  lda kolor_ramki
   sta $d020
   lda #cls_code				; Czyszczenie ekranu inline
   jmp CHROUT				; Skok do funkcji KERNALA, ta zakończy się RTS i wyjście do BASICA
