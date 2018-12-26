@@ -54,7 +54,7 @@ stany_on				.DC fire_on,pionowy_p,pionowy_l,poziomy_d,poziomy_g
 						.DC     fire_on,pionowy_p,pionowy_l,poziomy_d,poziomy_g
 stany_off				.DC fire_off,pionowy,pionowy,poziomy,poziomy
 						.DC     fire_off,pionowy,pionowy,poziomy,poziomy
-powitanie 				.DC "*** CP TESTER V.5 ***",0				;Napisy na ekranie
+powitanie 				.DC "*** CPTESTER V5.0 ***",0				;Napisy na ekranie
 opis					.DC "PORT #1     PORT #2",0
 wyjscie					.DC "PRESS STOP KEY TO EXIT...",0
 kolor_ramki_nowy_tmp	.DC #$00
