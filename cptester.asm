@@ -154,10 +154,10 @@ pozycje:
 	.DC #<[j1p],#<[j1p + 1],#<[j1p - 1],#<[j1p + wwierszu],#<[j1p - wwierszu]
 stany_on:
 	.DC fire_on,pionowy_p,pionowy_l,poziomy_d,poziomy_g
-	.DC     fire_on,pionowy_p,pionowy_l,poziomy_d,poziomy_g
+	.DC fire_on,pionowy_p,pionowy_l,poziomy_d,poziomy_g
 stany_off:
 	.DC fire_off,pionowy,pionowy,poziomy,poziomy
-	.DC     fire_off,pionowy,pionowy,poziomy,poziomy
+	.DC fire_off,pionowy,pionowy,poziomy,poziomy
 powitanie:
 	.DC "*** CPTESTER V6.0 ***",0				;Napisy na ekranie
 opis
@@ -170,7 +170,6 @@ kolor_ramki_nowy:
 	.DC #$00
 znak_c:
 	.DC #$00
-
 
 ; *********** Kod programu *************  
 
@@ -186,8 +185,6 @@ irg_1:
   asl $d019					;"Acknowledge" the interrupt by clearing the VIC's interrupt flag.
   jmp $ea31					;Jump to the beginning KERNAL's standard interrupt service routine.
 
-
-
 irg_2:	
   lda #<irg_1
   sta $0314
@@ -199,9 +196,6 @@ irg_2:
   sta $d020
   asl $d019					;"Acknowledge" the interrupt by clearing the VIC's interrupt flag.
   jmp $ea81					;Jump to the final part of KERNAL's standard interrupt service routine.
-
-
-
 
 asmstart:
   lda #%01111111
@@ -302,7 +296,6 @@ koniec:
   sta $d020
   lda #cls_code				; Czyszczenie ekranu inline
   jmp CHROUT				; Skok do funkcji KERNALA, ta zakończy się RTS i wyjście do BASICA
-
   
 ; ********** Funkcje dodatkowe *******************
 
@@ -319,4 +312,4 @@ putmsg .SUBROUTINE 			; Wypisanie stringa na ekran od aktualnej pozycji kursora
   bne .loop
 .koniec
   rts
-
+ 
