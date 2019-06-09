@@ -48,18 +48,128 @@ basend:
 
 ; ********* Dane w pamięci ***************
 
-pozycje					.DC #<j2p,#<[j2p + 1],#<[j2p - 1],#<[j2p + wwierszu],#<[j2p - wwierszu]
-						.DC #<[j1p],#<[j1p + 1],#<[j1p - 1],#<[j1p + wwierszu],#<[j1p - wwierszu]
-stany_on				.DC fire_on,pionowy_p,pionowy_l,poziomy_d,poziomy_g
-						.DC     fire_on,pionowy_p,pionowy_l,poziomy_d,poziomy_g
-stany_off				.DC fire_off,pionowy,pionowy,poziomy,poziomy
-						.DC     fire_off,pionowy,pionowy,poziomy,poziomy
-powitanie 				.DC "*** CPTESTER V5.0 ***",0				;Napisy na ekranie
-opis					.DC "PORT #1     PORT #2",0
-wyjscie					.DC "PRESS STOP KEY TO EXIT...",0
-kolor_ramki_nowy_tmp	.DC #$00
-kolor_ramki_nowy		.DC #$00
-znak_c					.DC #$00
+joy_c_data
+	.DC $07,$ff,$d0,$1f,$c3,$f4,$3f,$c3
+	.DC $fc,$43,$ff,$c1,$c3,$ff,$c3,$cf
+	.DC $ff,$f3,$ff,$eb,$ff,$ff,$96,$ff
+	.DC $fe,$55,$bf,$ce,$69,$b3,$ce,$69
+	.DC $b3,$ce,$69,$b3,$fe,$55,$bf,$ff
+	.DC $96,$ff,$ff,$eb,$ff,$cf,$ff,$f3
+	.DC $c3,$ff,$c3,$43,$ff,$c1,$3f,$c3
+	.DC $fc,$1f,$c3,$f4,$07,$ff,$d0,$8e
+
+joy_u_data
+	.DC $07,$ff,$d0,$1f,$c3,$f4,$3f,$c3
+	.DC $fc,$43,$ff,$c1,$c3,$d7,$c3,$cf
+	.DC $69,$f3,$ff,$69,$ff,$ff,$69,$ff
+	.DC $fe,$69,$bf,$ce,$69,$b3,$ce,$69
+	.DC $b3,$ce,$69,$b3,$fe,$55,$bf,$ff
+	.DC $96,$ff,$ff,$eb,$ff,$cf,$ff,$f3
+	.DC $c3,$ff,$c3,$43,$ff,$c1,$3f,$c3
+	.DC $fc,$1f,$c3,$f4,$07,$ff,$d0,$8e
+
+joy_ur_data
+	.DC $07,$ff,$d0,$1f,$c3,$f4,$3f,$c3
+	.DC $fc,$43,$ff,$c1,$c3,$ff,$c3,$cf
+	.DC $ff,$f3,$ff,$e9,$5f,$ff,$96,$9f
+	.DC $fe,$5a,$9f,$ce,$6a,$93,$ce,$6a
+	.DC $73,$ce,$69,$73,$fe,$55,$bf,$ff
+	.DC $96,$ff,$ff,$eb,$ff,$cf,$ff,$f3
+	.DC $c3,$ff,$c3,$43,$ff,$c1,$3f,$c3
+	.DC $fc,$1f,$c3,$f4,$07,$ff,$d0,$8e
+
+joy_r_data
+	.DC $07,$ff,$d0,$1f,$c3,$f4,$3f,$c3
+	.DC $fc,$43,$ff,$c1,$c3,$ff,$c3,$cf
+	.DC $ff,$f3,$ff,$eb,$ff,$ff,$96,$ff
+	.DC $fe,$55,$5f,$ce,$6a,$93,$ce,$6a
+	.DC $93,$ce,$6a,$93,$fe,$55,$5f,$ff
+	.DC $96,$ff,$ff,$eb,$ff,$cf,$ff,$f3
+	.DC $c3,$ff,$c3,$43,$ff,$c1,$3f,$c3
+	.DC $fc,$1f,$c3,$f4,$07,$ff,$d0,$8e
+
+joy_dr_data
+	.DC $07,$ff,$d0,$1f,$c3,$f4,$3f,$c3
+	.DC $fc,$43,$ff,$c1,$c3,$ff,$c3,$cf
+	.DC $ff,$f3,$ff,$eb,$ff,$ff,$96,$ff
+	.DC $fe,$55,$bf,$ce,$69,$73,$ce,$6a
+	.DC $73,$ce,$6a,$93,$fe,$5a,$9f,$ff
+	.DC $96,$9f,$ff,$e9,$5f,$cf,$ff,$f3
+	.DC $c3,$ff,$c3,$43,$ff,$c1,$3f,$c3
+	.DC $fc,$1f,$c3,$f4,$07,$ff,$d0,$8e
+
+joy_d_data
+	.DC $07,$ff,$d0,$1f,$c3,$f4,$3f,$c3
+	.DC $fc,$43,$ff,$c1,$c3,$ff,$c3,$cf
+	.DC $ff,$f3,$ff,$eb,$ff,$ff,$96,$ff
+	.DC $fe,$55,$bf,$ce,$69,$b3,$ce,$69
+	.DC $b3,$ce,$69,$b3,$fe,$69,$bf,$ff
+	.DC $69,$ff,$ff,$69,$ff,$cf,$69,$f3
+	.DC $c3,$d7,$c3,$43,$ff,$c1,$3f,$c3
+	.DC $fc,$1f,$c3,$f4,$07,$ff,$d0,$8e
+
+joy_dl_data
+	.DC $07,$ff,$d0,$1f,$c3,$f4,$3f,$c3
+	.DC $fc,$43,$ff,$c1,$c3,$ff,$c3,$cf
+	.DC $ff,$f3,$ff,$eb,$ff,$ff,$96,$ff
+	.DC $fe,$55,$bf,$cd,$69,$b3,$cd,$a9
+	.DC $b3,$c6,$a9,$b3,$f6,$a5,$bf,$f6
+	.DC $96,$ff,$f5,$6b,$ff,$cf,$ff,$f3
+	.DC $c3,$ff,$c3,$43,$ff,$c1,$3f,$c3
+	.DC $fc,$1f,$c3,$f4,$07,$ff,$d0,$8e
+
+joy_l_data
+	.DC $07,$ff,$d0,$1f,$c3,$f4,$3f,$c3
+	.DC $fc,$43,$ff,$c1,$c3,$ff,$c3,$cf
+	.DC $ff,$f3,$ff,$eb,$ff,$ff,$96,$ff
+	.DC $f5,$55,$bf,$c6,$a9,$b3,$c6,$a9
+	.DC $b3,$c6,$a9,$b3,$f5,$55,$bf,$ff
+	.DC $96,$ff,$ff,$eb,$ff,$cf,$ff,$f3
+	.DC $c3,$ff,$c3,$43,$ff,$c1,$3f,$c3
+	.DC $fc,$1f,$c3,$f4,$07,$ff,$d0,$8e
+
+joy_ul_data
+	.DC $07,$ff,$d0,$1f,$c3,$f4,$3f,$c3
+	.DC $fc,$43,$ff,$c1,$c3,$ff,$c3,$cf
+	.DC $ff,$f3,$f5,$6b,$ff,$f6,$96,$ff
+	.DC $f6,$a5,$bf,$c6,$a9,$b3,$cd,$a9
+	.DC $b3,$cd,$69,$b3,$fe,$55,$bf,$ff
+	.DC $96,$ff,$ff,$eb,$ff,$cf,$ff,$f3
+	.DC $c3,$ff,$c3,$43,$ff,$c1,$3f,$c3
+	.DC $fc,$1f,$c3,$f4,$07,$ff,$d0,$8e
+
+;// sprite 9 / multicolor / color: $0a
+joy_fire_data
+	.DC $00,$00,$00,$00,$28,$00,$00,$28
+	.DC $00,$28,$00,$28,$28,$00,$28,$20
+	.DC $00,$08,$00,$00,$00,$00,$00,$00
+	.DC $00,$00,$00,$20,$00,$08,$20,$00
+	.DC $08,$20,$00,$08,$00,$00,$00,$00
+	.DC $00,$00,$00,$00,$00,$20,$00,$08
+	.DC $28,$00,$28,$28,$00,$28,$00,$28
+	.DC $00,$00,$28,$00,$00,$00,$00,$8a
+
+pozycje:
+	.DC #<j2p,#<[j2p + 1],#<[j2p - 1],#<[j2p + wwierszu],#<[j2p - wwierszu]
+	.DC #<[j1p],#<[j1p + 1],#<[j1p - 1],#<[j1p + wwierszu],#<[j1p - wwierszu]
+stany_on:
+	.DC fire_on,pionowy_p,pionowy_l,poziomy_d,poziomy_g
+	.DC     fire_on,pionowy_p,pionowy_l,poziomy_d,poziomy_g
+stany_off:
+	.DC fire_off,pionowy,pionowy,poziomy,poziomy
+	.DC     fire_off,pionowy,pionowy,poziomy,poziomy
+powitanie:
+	.DC "*** CPTESTER V6.0 ***",0				;Napisy na ekranie
+opis
+	.DC "PORT #1     PORT #2",0
+wyjscie:
+	.DC "PRESS STOP KEY TO EXIT...",0
+kolor_ramki_nowy_tmp:
+	.DC #$00
+kolor_ramki_nowy:
+	.DC #$00
+znak_c:
+	.DC #$00
 
 
 ; *********** Kod programu *************  
