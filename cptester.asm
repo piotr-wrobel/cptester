@@ -1,50 +1,65 @@
  processor 6502				;Procesor 6510, 6502, 8500 - C64
  org $0801
  
-PLOT	= $fff0				; Funkcja PLOT z KERNAL (ustawienie kursora)
-CHROUT	= $ffd2				; Funkcja CHROUT z KERNAL (wypisanie znaku na aktualnej pozycji kursora)
+PLOT	= $fff0					; Funkcja PLOT z KERNAL (ustawienie kursora)
+CHROUT	= $ffd2			; Funkcja CHROUT z KERNAL (wypisanie znaku na aktualnej pozycji kursora)
 zero_tmp = $FB				; Miejsce na stronie zerowej, na wskaźnik do wypisywanego stringa
-kolor_ramki = [zero_tmp + 3]
-stop 	= $91				; Adres na mapie C64 - można z niego odczytać status klawisza RUN/STOP #$7F
-stop_pressed	= $7f
-port2 	= $dc00				; Adres Control Port 2
-port1 	= $dc01				; Adres Control Port 1
-ekran 	= $400				; Adres początku ekranu tekstowego
-colory_ekran	= $d800		; Adres początku mapy kolorów ekranu
-cls_code = 147				; Kod czyszczenia ekranu
-kolor_aktywny = 4			; Fioletowy :)
+stop 	= $91						; Adres na mapie C64 - można z niego odczytać status klawisza RUN/STOP #$7F
+stop_pressed	= $7f		; Maska nacisnietego klawisza STOP
+port2 	= $dc00					; Adres Control Port 2
+port1 	= $dc01					; Adres Control Port 1
+cls_code = 147					; Kod czyszczenia ekranu
 
-wwierszu 	= 40							; Długość wiersza ekranu
-wiersz 		= 8
-j1p 	= ekran+(wwierszu*wiersz)+13		; Wyznaczenie środka wizualizacji stanu joysticka na porcie 1
-j2p 	= ekran+(wwierszu*wiersz)+25		; Wyznaczenie środka wizualizacji stanu joysticka na porcie 2
+SPRITES_MEMORY 	= $3200
+SPR_J_C							= [SPRITES_MEMORY/64]
+SPR_J_U							= [SPR_J_C + 1]
+SPR_J_UR						= [SPR_J_C + 2]
+SPR_J_R							= [SPR_J_C + 3]
+SPR_J_DR						= [SPR_J_C + 4]
+SPR_J_D							= [SPR_J_C + 5]
+SPR_J_DL						= [SPR_J_C + 6]
+SPR_J_L							= [SPR_J_C + 7]
+SPR_J_UL						= [SPR_J_C + 8]
+SPR_J_FIRE					= [SPR_J_C + 9]
+SPR_J_ERR					= [SPR_J_C + 10]
 
-hbyte  = >j1p
-hbyte_c = >(colory_ekran+(wwierszu*wiersz)+13)
+MULTICOLOR_ON		= $d01c
+MULTICOLOR_R1 		= $d025
+MULTICOLOR_R2 		= $d026
 
-pionowy		= 66			; Kod znaku lini pionowej
-poziomy		= 67			; Kod znaku lini poziomej
-pionowy_l	= 115			; Kod znaku -|
-pionowy_p	= 107			; Kod znaku |-
-poziomy_g	= 113			; Kod znaku _|_
-poziomy_d	= 114			; Kod znaku odwrotnego do powyższego
-fire_on		= 81			; Kod znaku pełnego kółeczka
-fire_off	= 87			; Kod znaku pustego kółeczka
+SPRITE_VISIBLE_R 	= $d015
 
-up		= $01
-down	= $02
-left	= $04
-right	= $08
-fire	= $10
+SPRITE_X_EXPAND	= $d01d
+SPRITE_Y_EXPAND	= $d017
+
+SPRITE0_COLOR 		= $d027
+SPRITE0_POINTER 	= $07f8
+
+SPRITE0_X_REG 			= $d000
+SPRITE0_Y_REG 			= $d001
+
+SPRITE_0						= $01
+SPRITE_1						= $02
+SPRITE_2						= $04
+SPRITE_3						= $08
+SPRITE_4						= $10
+SPRITE_5						= $20
+SPRITE_6						= $40
+SPRITE_7						= $80
+SPRITE_ALL					= $ff
+
+JOY_0_X_POS				= 120
+JOY_0_Y_POS				= 110
+JOY_1_X_POS				= 216
+JOY_1_Y_POS				= 110
 
 ; ******* Poczatek w BASIC ********
 
-  .WORD basend,asmstart 	; Adres następnej linii w basicu, nr lini BASIC taki jak adres procedury (dla żartu)
-  .DC #$9e,(asmstart/1000)%10+$30,(asmstart/100)%10+$30,(asmstart/10)%10+$30,asmstart%10+$30 ; komenda SYS, czterocyfrowy adres procedury w ASCII
-  .DC #$00 					; koniec lini w BASIC
+  .WORD basend,asmstart 																																					; Adres następnej linii w basicu, nr lini BASIC taki jak adres procedury (dla żartu)
+  .DC #$9e,(asmstart/1000)%10+$30,(asmstart/100)%10+$30,(asmstart/10)%10+$30,asmstart%10+$30 	; komenda SYS, czterocyfrowy adres procedury w ASCII
+  .DC #$00																																												; koniec lini w BASIC
 basend:
-  .WORD #$0000 				; koniec programu w BASIC
-
+  .WORD #$0000 																																									; koniec programu w BASIC
 
 ; ********* Dane w pamięci ***************
 
@@ -138,7 +153,6 @@ joy_ul_data
 	.DC $c3,$ff,$c3,$43,$ff,$c1,$3f,$c3
 	.DC $fc,$1f,$c3,$f4,$07,$ff,$d0,$8e
 
-;// sprite 9 / multicolor / color: $0a
 joy_fire_data
 	.DC $00,$00,$00,$00,$28,$00,$00,$28
 	.DC $00,$28,$00,$28,$28,$00,$28,$20
@@ -149,80 +163,70 @@ joy_fire_data
 	.DC $28,$00,$28,$28,$00,$28,$00,$28
 	.DC $00,$00,$28,$00,$00,$00,$00,$8a
 
-pozycje:
-	.DC #<j2p,#<[j2p + 1],#<[j2p - 1],#<[j2p + wwierszu],#<[j2p - wwierszu]
-	.DC #<[j1p],#<[j1p + 1],#<[j1p - 1],#<[j1p + wwierszu],#<[j1p - wwierszu]
-stany_on:
-	.DC fire_on,pionowy_p,pionowy_l,poziomy_d,poziomy_g
-	.DC fire_on,pionowy_p,pionowy_l,poziomy_d,poziomy_g
-stany_off:
-	.DC fire_off,pionowy,pionowy,poziomy,poziomy
-	.DC fire_off,pionowy,pionowy,poziomy,poziomy
+joy_error_data:
+	.DC $07,$ff,$d0,$1f,$ff,$f4,$3f,$ff
+	.DC $fc,$7f,$ff,$fd,$ff,$ff,$ff,$ff
+	.DC $ff,$ff,$c3,$03,$03,$cf,$33,$33
+	.DC $cf,$33,$33,$cf,$03,$03,$c3,$0f
+	.DC $0f,$cf,$33,$33,$cf,$33,$33,$cf
+	.DC $33,$33,$c3,$33,$33,$ff,$ff,$ff
+	.DC $ff,$ff,$ff,$7f,$ff,$fd,$3f,$ff
+	.DC $fc,$1f,$ff,$f4,$07,$ff,$d0,$8e
+mapa_joy:
+	.DC SPR_J_C, SPR_J_U, SPR_J_D, SPR_J_ERR, SPR_J_L, SPR_J_UL, SPR_J_DL, SPR_J_ERR, SPR_J_R, SPR_J_UR, SPR_J_DR, SPR_J_ERR, SPR_J_ERR, SPR_J_ERR, SPR_J_ERR, SPR_J_ERR
 powitanie:
 	.DC "*** CPTESTER V6.0 ***",0				;Napisy na ekranie
 opis
 	.DC "PORT #1     PORT #2",0
 wyjscie:
 	.DC "PRESS STOP KEY TO EXIT...",0
-kolor_ramki_nowy_tmp:
-	.DC #$00
-kolor_ramki_nowy:
-	.DC #$00
-znak_c:
-	.DC #$00
 
 ; *********** Kod programu *************  
 
-irg_1:	
-  lda #<irg_2
-  sta $0314
-  lda #>irg_2
-  sta $0315					;Re-direct next interrupt to irg_2 service routine
-  lda #250
-  sta $d012					;Next interrupt to occur at raster line no. 0
-  lda kolor_ramki_nowy
-  sta $d020
-  asl $d019					;"Acknowledge" the interrupt by clearing the VIC's interrupt flag.
-  jmp $ea31					;Jump to the beginning KERNAL's standard interrupt service routine.
+; irg_1:
+  ; lda #<irg_2
+  ; sta $0314
+  ; lda #>irg_2
+  ; sta $0315					;Re-direct next interrupt to irg_2 service routine
+  ; lda #250
+  ; sta $d012					;Next interrupt to occur at raster line no. 0
+  ; asl $d019					;"Acknowledge" the interrupt by clearing the VIC's interrupt flag.
+  ; jmp $ea31				;Jump to the beginning KERNAL's standard interrupt service routine.
 
-irg_2:	
-  lda #<irg_1
-  sta $0314
-  lda #>irg_1
-  sta $0315					;Re-direct next interrupt back to irg_1
-  lda #50
-  sta $d012					;Next interrupt to occur at raster line no. 210
-  lda kolor_ramki
-  sta $d020
-  asl $d019					;"Acknowledge" the interrupt by clearing the VIC's interrupt flag.
-  jmp $ea81					;Jump to the final part of KERNAL's standard interrupt service routine.
+; irg_2:
+  ; lda #<irg_1
+  ; sta $0314
+  ; lda #>irg_1
+  ; sta $0315					;Re-direct next interrupt back to irg_1
+  ; lda #50
+  ; sta $d012					;Next interrupt to occur at raster line no. 210
+  ; asl $d019					;"Acknowledge" the interrupt by clearing the VIC's interrupt flag.
+  ; jmp $ea81				;Jump to the final part of KERNAL's standard interrupt service routine.
 
 asmstart:
-  lda #%01111111
-  sta $dc0d					;"Switch off" interrupts signals from CIA-1
-  and $d011
-  sta $d011					;Clear most significant bit in VIC's raster register
-  lda #51
-  sta $d012					;Set the raster line number where interrupt should occur
-  lda #<irg_1
-  sta $0314
-  lda #>irg_1
-  sta $0315					;Set the interrupt vector to point to interrupt service routine below
-  lda $d020
-  sta kolor_ramki
-  lda #%00000001
-  sta $d01a					;Enable raster interrupt signals from VIC
+  ; lda #%01111111
+  ; sta $dc0d					;"Switch off" interrupts signals from CIA-1
+  ; and $d011
+  ; sta $d011					;Clear most significant bit in VIC's raster register
+  ; lda #51
+  ; sta $d012					;Set the raster line number where interrupt should occur
+  ; lda #<irg_1
+  ; sta $0314
+  ; lda #>irg_1
+  ; sta $0315					;Set the interrupt vector to point to interrupt service routine below
+  ; lda #%00000001
+  ; sta $d01a					;Enable raster interrupt signals from VIC
   
   lda #cls_code				; Czyszczenie ekranu inline
   jsr CHROUT
-  ldx #2					; Ustawienie wiersza
-  ldy #9					; Ustawienie kolumny
-  lda #<powitanie			; Pod adres zero_tmp wrzucany wskaznik do napisu
+  ldx #2							; Ustawienie wiersza
+  ldy #9							; Ustawienie kolumny
+  lda #<powitanie		; Pod adres zero_tmp wrzucany wskaznik do napisu
   sta zero_tmp
   lda #>powitanie
   sta [zero_tmp + 1]
   jsr putmsg_xy
-  ldx #5					; Ustawienie wiersza
+  ldx #5						; Ustawienie wiersza
   ldy #10					; Ustawienie kolumny
   lda #<opis				; Pod adres zero_tmp wrzucany wskaznik do napisu
   sta zero_tmp
@@ -230,86 +234,164 @@ asmstart:
   sta [zero_tmp + 1]
   jsr putmsg_xy  
   ldx #22					; Ustawienie wiersza
-  ldy #0					; Ustawienie kolumny
-  lda #<wyjscie				; Pod adres zero_tmp wrzucany wskaznik do napisu
+  ldy #8						; Ustawienie kolumny
+  lda #<wyjscie			; Pod adres zero_tmp wrzucany wskaznik do napisu
   sta zero_tmp
   lda #>wyjscie
   sta [zero_tmp + 1]
   jsr putmsg_xy
 
-loop:  						; Pętla główna
-  lda kolor_ramki
-  sta kolor_ramki_nowy_tmp
-  ldy #9					; Ilość przebiegów pętli sprawdzającej *2 / 10*2
-  lda port1					
-  sta [zero_tmp + 2]		; Zachowujemy zawartosc portu, do badania kolejnych bitow w zero_tmp+2
-zapisz:  
-  cpy #4
-  bne omin
-  lda port2					; Jeżeli jesteśmy w połowie pętli, to zachowujemy zawartosc drugiego portu, pierwszy jest przeanalizowany
-  sta [zero_tmp + 2]
-omin:
-  ldx stany_off,y			; Juz tutaj ładujemy do X odwzorowanie stanu nieaktywnego pola wynikajacego z indeksu Y
-  lda colory_ekran+999		; Kolor ostatniego znaku, to kolor znaków przed uruchomieniem programu, tego koloru nie modyfikujemy
-  sta znak_c   
-  lda #01					; Testujemy najmlodszy bit, pozniej przesuniemy w prawo
-  and [zero_tmp + 2]
-  bne pusty
-ustawiony:
-  ldx stany_on,y			; Ładujemy do X odwzorowanie stanu aktywnego pola wynikajacego z indeksu Y
-  lda $d021
-  sta kolor_ramki_nowy_tmp
-  lda #kolor_aktywny
-  sta znak_c  
-pusty:
-  lsr [zero_tmp + 2]			; Przesuwamy w prawo, by następnym razem sprawdzić kolejny bit
-  lda pozycje,y				; Ustawiamy na stronie zerowej adres na ekranie, gdzie wyświetlamy odwzorowanie
-  sta zero_tmp
-  lda #hbyte
-  sta [zero_tmp + 1]
-  txa						; Do akumlatora przesuwamy z X ustawiony wcześniej symbol odwzorowania stanu
-  ldx #$00					; Ładujemy 0 do X, żeby wykorzystać zapis indeksowany (bez przesunięcia) typu indirect
-  sta (zero_tmp,x)			; Na ekran przygotowany symbol
-  lda #hbyte_c					; Zmieniamy tylko starszy bajt adresu, żeby wskazywał na mapę kolorów
-  sta [zero_tmp + 1]
-  lda znak_c
-  sta (zero_tmp,x)
-  dey
-  bpl zapisz 				; Jeżeli indeks nieujemny to zapętlamy
-  lda stop
-  cmp #stop_pressed
-  beq koniec 
-  lda kolor_ramki_nowy_tmp
-  sta kolor_ramki_nowy
-  jmp loop
+; Skopiowanie Sprites do właściwej lokalizacji w pamięci
+
+	ldx #$00		; 256 bajtów do przepisania ! :)
+loop_s0:				; petla przepisujaca pod właściwy adres
+	lda joy_c_data,x
+	sta SPRITES_MEMORY,x
+	inx
+	bne loop_s0
+
+	ldx #$00		; 256 bajtów do przepisania ! :)
+loop_s1:				; petla przepisujaca pod właściwy adres
+	lda joy_dr_data,x
+	sta [SPRITES_MEMORY+[4*64]],x
+	inx
+	bne loop_s1
+
+	ldx #$00		; 192 bajty do przepisania ! :)
+loop_s2:				; petla przepisujaca pod właściwy adres
+	lda joy_ul_data,x
+	sta [SPRITES_MEMORY+[8*64]],x
+	inx
+	cpx #$c0
+	bne loop_s2
+
+; Ustawienie wyświetlania Sprites
+
+	lda #$03											; sprite multicolor 1
+	sta MULTICOLOR_R1
+	lda #$05											; sprite multicolor 2
+	sta MULTICOLOR_R2
+	lda #[SPRITE_0 + SPRITE_2 ]	; te sprite widoczne na poczatek
+	sta SPRITE_VISIBLE_R
+
+	lda #$0e											; główny kolor sprite 0
+	sta SPRITE0_COLOR
+	lda #SPR_J_C
+	sta SPRITE0_POINTER
+	lda #JOY_0_X_POS
+	sta SPRITE0_X_REG
+	lda #JOY_0_Y_POS
+	sta SPRITE0_Y_REG
+
+	lda #$0a											; główny kolor sprite 1
+	sta [SPRITE0_COLOR+1]
+	lda #SPR_J_FIRE
+	sta [SPRITE0_POINTER+1]
+	lda #JOY_0_X_POS
+	sta [SPRITE0_X_REG+2]
+	lda #JOY_0_Y_POS
+	sta [SPRITE0_Y_REG+2]
+
+	lda #$0e										; główny kolor sprite 2
+	sta [SPRITE0_COLOR+2]
+	lda #SPR_J_C
+	sta [SPRITE0_POINTER+2]
+	lda #JOY_1_X_POS
+	sta [SPRITE0_X_REG+4]
+	lda #JOY_1_Y_POS
+	sta [SPRITE0_Y_REG+4]
+
+	lda #$0a									; główny kolor sprite 3
+	sta [SPRITE0_COLOR+3]
+	lda #SPR_J_FIRE
+	sta [SPRITE0_POINTER+3]
+	lda #JOY_1_X_POS
+	sta [SPRITE0_X_REG+6]
+	lda #JOY_1_Y_POS
+	sta [SPRITE0_Y_REG+6]
+
+	lda #[SPRITE_0 + SPRITE_1 + SPRITE_2 + SPRITE_3]
+	sta MULTICOLOR_ON
+
+	lda #<mapa_joy						;Młodszy bajt adresu mapy  banków sprite
+	sta zero_tmp							;Zapisujemy na strone zerową
+	lda #>mapa_joy						;Starszy bajt adresu mapy banków sprite
+	sta [zero_tmp +1]					;Zapisujemy na strone zerowa
+loop:  												; Pętla główna
+; Port 1
+	lda port1									;Do akumlatora wartosc portu 1
+	eor #$1f
+	tax												;Robimy sobie kopie w rej X
+	and #$0f									;Zostawiamy najmlodsze 4 bity (4 kierunki JOYA)
+	tay												;Wrzucamy to do rej Y, przyda sie do zaindeksowania adresu banku sprite
+	lda (zero_tmp),y						;Mamy poprawny bank dla sprite nr 0
+	sta SPRITE0_POINTER		;No i go wyswietlamy ! :)
+	lda SPRITE_VISIBLE_R	;Do rej A wyswietlane sprite'y
+	and #[SPRITE_0 + SPRITE_2 + SPRITE_3]					;Zostawimy wszystkie oprocz sprite 1 (fire dla port 1)
+	tay												; Co  sobie zapamietamy w rej Y
+	txa												;Do A zapamiętany w X port_1 już zanegowany
+	and #$10									; Czy jest aktywny fire ?
+	beq aktualizuj_j1
+	tya												; Jest aktywny fire - włączamy SPRITE_1
+	ora #[SPRITE_1]
+	bne gotowy_j1
+aktualizuj_j1:
+	tya
+gotowy_j1:
+	sta SPRITE_VISIBLE_R
+;Port 2
+	lda port2									;Do akumlatora wartosc portu 1
+	eor #$1f
+	tax												;Robimy sobie kopie w rej X
+	and #$0f									;Zostawiamy najmlodsze 4 bity (4 kierunki JOYA)
+	tay												;Wrzucamy to do rej Y, przyda sie do zaindeksowania adresu banku sprite
+	lda (zero_tmp),y						;Mamy poprawny bank dla sprite nr 0
+	sta [SPRITE0_POINTER+2]												;No i go wyswietlamy ! :)
+	lda SPRITE_VISIBLE_R													;Do rej A wyswietlane sprite'y
+	and #[SPRITE_0 + SPRITE_1+ SPRITE_2]					;Zostawimy wszystkie oprocz sprite 3 (fire dla port 2)
+	tay												; Co  sobie zapamietamy w rej Y
+	txa												;Do A zapamiętany w X port_1 już zanegowany
+	and #$10									; Czy jest aktywny fire ?
+	beq aktualizuj_j2
+	tya												; Jest aktywny fire - włączamy SPRITE_3
+	ora #[SPRITE_3]
+	bne gotowy_j2
+aktualizuj_j2:
+	tya
+gotowy_j2:
+	sta SPRITE_VISIBLE_R
+
+	lda stop
+	cmp #stop_pressed
+	beq koniec
+	jmp loop
 
 koniec:
-  lda #%00000000
-  sta $d01a	;Disable raster interrupt signals from VIC
-  lda #%11111111
-  sta $dc0d	;"Switch on" interrupts signals from CIA-1  
-  lda #$31
-  sta $0314
-  lda #$ea
-  sta $0315
-  lda kolor_ramki
-  sta $d020
-  lda #cls_code				; Czyszczenie ekranu inline
-  jmp CHROUT				; Skok do funkcji KERNALA, ta zakończy się RTS i wyjście do BASICA
+	; lda #%00000000
+	; sta $d01a	;Disable raster interrupt signals from VIC
+	; lda #%11111111
+	; sta $dc0d	;"Switch on" interrupts signals from CIA-1
+	; lda #$31
+	; sta $0314
+	; lda #$ea
+	; sta $0315
+	lda #$00
+	sta SPRITE_VISIBLE_R
+	lda #cls_code				; Czyszczenie ekranu inline
+	jmp CHROUT				; Skok do funkcji KERNALA, ta zakończy się RTS i wyjście do BASICA
   
 ; ********** Funkcje dodatkowe *******************
 
 putmsg_xy .SUBROUTINE		; Wypisanie stringa na ekran od zdefiniowanej X,Y pozycji kursora
-  clc 
-  jsr PLOT
+	clc
+	jsr PLOT
 putmsg .SUBROUTINE 			; Wypisanie stringa na ekran od aktualnej pozycji kursora
-  ldy #$00
+	ldy #$00
 .loop: 
-  lda (zero_tmp),y
-  beq .koniec
-  jsr CHROUT
-  iny
-  bne .loop
+	lda (zero_tmp),y
+	beq .koniec
+	jsr CHROUT
+	iny
+	bne .loop
 .koniec
-  rts
- 
+	rts
