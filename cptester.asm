@@ -185,9 +185,15 @@ opis
 	.DC "PORT #1     PORT #2",0
 wyjscie:
 	.DC "PRESS STOP KEY TO EXIT...",0
+xshift:
+	.DC $04
+kolor_tla:
+	.DC $00
 
 ; *********** Kod programu *************  
 asmstart:  
+	lda $d020
+	sta kolor_tla
 	lda #cls_code				; Czyszczenie ekranu inline
 	jsr CHROUT
 	ldx #2							; Ustawienie wiersza
@@ -284,6 +290,25 @@ loop_s2:					; petla przepisujaca pod właściwy adres
 	sta zero_tmp							; Zapisujemy na strone zerową
 	lda #>mapa_joy						; Starszy bajt adresu mapy banków sprite
 	sta [zero_tmp +1]						; Zapisujemy na strone zerowa
+; Ustawienie przerwania
+	sei
+	lda #%01111111
+	sta $dc0d			;"Switch off" interrupts signals from CIA-1
+	sta $dd0d			;"Switch off" interrupts signals from CIA-2
+	and $d011
+	sta $d011			;Clear most significant bit in VIC's raster register
+	lda #210
+	sta $d012			;Set the raster line number where interrupt should occur
+	lda #<przerwanie_1	; Pod adres zero_tmp wrzucany wskaznik do napisu
+	sta $0314
+	lda #>przerwanie_1
+	sta $0315
+	lda $d01a
+	ora #%00000001
+	sta $d01a			;Enable raster interrupt signals from VIC
+	lda $dc0d			;Skasowanie ewentualnych przerwań które się pojawiły w międzyczasie od CIA-1
+	lda $dd0d			;Skasowanie ewentualnych przerwań które się pojawiły w międzyczasie od CIA-2
+	cli
 loop:  											; Pętla główna
 ; Port 1
 	lda port1									; Do akumlatora wartosc portu 1
@@ -334,8 +359,23 @@ gotowy_j2:
 	jmp loop
 
 koniec:
+	sei
+	lda #$31
+	sta $0314
+	lda #$ea
+	sta $0315
+	lda #%10000001
+	sta $dc0d			;"Switch ON" interrupts signals from CIA-1
+	lda $d01a
+	and #%11111110
+	sta $d01a			;Enable raster interrupt signals from VIC
+	cli
 	lda #$00
 	sta SPRITE_VISIBLE_R
+	lda #$07
+	sta $d016
+	lda kolor_tla
+	sta $d020
 	lda #cls_code						; Czyszczenie ekranu inline
 	jmp CHROUT						; Skok do funkcji KERNALA, ta zakończy się RTS i wyjście do BASICA
   
@@ -354,3 +394,36 @@ putmsg .SUBROUTINE 			; Wypisanie stringa na ekran od aktualnej pozycji kursora
 	bne .loop
 .koniec
 	rts
+przerwanie_1:
+	lda $d011
+	and #%11011111
+	sta $d011	
+	dec xshift
+	lda xshift
+	and #7
+	sta $d016
+	inc $d020
+	lda #255
+	sta $d012			;Set the raster line number where interrupt should occur
+	lda #<przerwanie_2
+	sta $0314
+	lda #>przerwanie_2
+	sta $0315
+	asl $d019
+	jmp $ea31
+przerwanie_2:
+	lda $d011
+	and #%11011111
+	sta $d011
+	lda #7
+	sta $d016
+	dec $d020
+	lda #210
+	sta $d012			;Set the raster line number where interrupt should occur	
+	lda #<przerwanie_1
+	sta $0314
+	lda #>przerwanie_1
+	sta $0315
+	asl $d019
+	jmp $ea81
+
