@@ -196,14 +196,14 @@ asmstart:
 	sta kolor_tla
 	lda #cls_code				; Czyszczenie ekranu inline
 	jsr CHROUT
-	ldx #2							; Ustawienie wiersza
-	ldy #9							; Ustawienie kolumny
-	lda #<powitanie			; Pod adres zero_tmp wrzucany wskaznik do napisu
+	ldx #2						; Ustawienie wiersza
+	ldy #9						; Ustawienie kolumny
+	lda #<powitanie				; Pod adres zero_tmp wrzucany wskaznik do napisu
 	sta zero_tmp
 	lda #>powitanie
 	sta [zero_tmp + 1]
 	jsr putmsg_xy
-	ldx #5							; Ustawienie wiersza
+	ldx #5						; Ustawienie wiersza
 	ldy #10						; Ustawienie kolumny
 	lda #<opis					; Pod adres zero_tmp wrzucany wskaznik do napisu
 	sta zero_tmp
@@ -376,7 +376,7 @@ koniec:
 	sta $d016
 	lda kolor_tla
 	sta $d020
-	lda #cls_code						; Czyszczenie ekranu inline
+	lda #cls_code					; Czyszczenie ekranu inline
 	jmp CHROUT						; Skok do funkcji KERNALA, ta zakończy się RTS i wyjście do BASICA
   
 ; ********** Funkcje dodatkowe *******************
@@ -397,7 +397,7 @@ putmsg .SUBROUTINE 			; Wypisanie stringa na ekran od aktualnej pozycji kursora
 przerwanie_1:
 	lda $d011
 	and #%11011111
-	sta $d011	
+	sta $d011			;Enable TXT mode
 	dec xshift
 	lda xshift
 	and #7
@@ -410,20 +410,20 @@ przerwanie_1:
 	lda #>przerwanie_2
 	sta $0315
 	asl $d019
-	jmp $ea31
+	jmp $ea81
 przerwanie_2:
 	lda $d011
 	and #%11011111
-	sta $d011
+	sta $d011			;Enable TXT mode
 	lda #7
 	sta $d016
 	dec $d020
 	lda #210
-	sta $d012			;Set the raster line number where interrupt should occur	
+	sta $d012			;Set the raster line number where interrupt should occur
 	lda #<przerwanie_1
 	sta $0314
 	lda #>przerwanie_1
 	sta $0315
 	asl $d019
-	jmp $ea81
+	jmp $ea31
 
