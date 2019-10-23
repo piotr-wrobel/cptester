@@ -1,14 +1,14 @@
  processor 6502				; Procesor 6510, 6502, 8500 - C64
  org $0801
  
-PLOT	= $fff0					; Funkcja PLOT z KERNAL (ustawienie kursora)
+PLOT	= $fff0				; Funkcja PLOT z KERNAL (ustawienie kursora)
 CHROUT	= $ffd2				; Funkcja CHROUT z KERNAL (wypisanie znaku na aktualnej pozycji kursora)
 zero_tmp = $FB				; Miejsce na stronie zerowej, na wskaźnik do wypisywanego stringa
-stop 	= $91						; Adres na mapie C64 - można z niego odczytać status klawisza RUN/STOP #$7F
+stop 	= $91				; Adres na mapie C64 - można z niego odczytać status klawisza RUN/STOP #$7F
 stop_pressed	= $7f		; Maska nacisnietego klawisza STOP
 port2 	= $dc00				; Adres Control Port 2
 port1 	= $dc01				; Adres Control Port 1
-cls_code = 147					; Kod czyszczenia ekranu
+cls_code = 147				; Kod czyszczenia ekranu
 
 SPRITES_MEMORY 	= $3200
 SPR_J_C							= [SPRITES_MEMORY/64]
@@ -20,7 +20,7 @@ SPR_J_D							= [SPR_J_C + 5]
 SPR_J_DL						= [SPR_J_C + 6]
 SPR_J_L							= [SPR_J_C + 7]
 SPR_J_UL						= [SPR_J_C + 8]
-SPR_J_FIRE					= [SPR_J_C + 9]
+SPR_J_FIRE						= [SPR_J_C + 9]
 SPR_J_ERR						= [SPR_J_C + 10]
 
 MULTICOLOR_ON		= $d01c
@@ -29,11 +29,11 @@ MULTICOLOR_R2 		= $d026
 
 SPRITE_VISIBLE_R 	= $d015
 
-SPRITE_X_EXPAND	= $d01d
-SPRITE_Y_EXPAND	= $d017
+SPRITE_X_EXPAND		= $d01d
+SPRITE_Y_EXPAND		= $d017
 
-SPRITES_MCOLOR1	= $03
-SPRITES_MCOLOR2	= $05
+SPRITES_MCOLOR1		= $03
+SPRITES_MCOLOR2		= $05
 SPRITE_COLOR1		= $0e
 SPRITE_COLOR2		= $07
 
@@ -43,20 +43,20 @@ SPRITE0_POINTER 	= $07f8
 SPRITE0_X_REG 		= $d000
 SPRITE0_Y_REG 		= $d001
 
-SPRITE_0					= $01
-SPRITE_1					= $02
-SPRITE_2					= $04
-SPRITE_3					= $08
-SPRITE_4					= $10
-SPRITE_5					= $20
-SPRITE_6					= $40
-SPRITE_7					= $80
-SPRITE_ALL				= $ff
+SPRITE_0			= $01
+SPRITE_1			= $02
+SPRITE_2			= $04
+SPRITE_3			= $08
+SPRITE_4			= $10
+SPRITE_5			= $20
+SPRITE_6			= $40
+SPRITE_7			= $80
+SPRITE_ALL			= $ff
 
-JOY_0_X_POS				= 120
-JOY_0_Y_POS				= 110
-JOY_1_X_POS				= 216
-JOY_1_Y_POS				= 110
+JOY_0_X_POS			= 120
+JOY_0_Y_POS			= 110
+JOY_1_X_POS			= 216
+JOY_1_Y_POS			= 110
 
 ; ******* Poczatek w BASIC ********
 
@@ -184,11 +184,13 @@ powitanie:
 opis
 	.DC "PORT #1     PORT #2",0
 wyjscie:
-	.DC "PRESS STOP KEY TO EXIT...",0
+	.DC "PRESS STOP KEY TO EXIT...     ",0
 xshift:
-	.DC $04
+	.DC $08
 kolor_tla:
 	.DC $00
+schowek:
+	.WORD #0000
 
 ; *********** Kod programu *************  
 asmstart:  
@@ -210,13 +212,20 @@ asmstart:
 	lda #>opis
 	sta [zero_tmp + 1]
 	jsr putmsg_xy  
-	ldx #22						; Ustawienie wiersza
+	ldx #17						; Ustawienie wiersza
 	ldy #8							; Ustawienie kolumny
 	lda #<wyjscie				; Pod adres zero_tmp wrzucany wskaznik do napisu
 	sta zero_tmp
 	lda #>wyjscie
 	sta [zero_tmp + 1]
 	jsr putmsg_xy
+	;ldx #22						; Ustawienie wiersza
+	;ldy #8						; Ustawienie kolumny
+	;lda #<wyjscie				; Pod adres zero_tmp wrzucany wskaznik do napisu
+	;sta zero_tmp
+	;lda #>wyjscie
+	;sta [zero_tmp + 1]
+	;jsr putmsg_xy
 
 ; Skopiowanie Sprites do właściwej lokalizacji w pamięci
 
@@ -297,7 +306,7 @@ loop_s2:					; petla przepisujaca pod właściwy adres
 	sta $dd0d			;"Switch off" interrupts signals from CIA-2
 	and $d011
 	sta $d011			;Clear most significant bit in VIC's raster register
-	lda #210
+	lda #200
 	sta $d012			;Set the raster line number where interrupt should occur
 	lda #<przerwanie_1	; Pod adres zero_tmp wrzucany wskaznik do napisu
 	sta $0314
@@ -394,13 +403,73 @@ putmsg .SUBROUTINE 			; Wypisanie stringa na ekran od aktualnej pozycji kursora
 	bne .loop
 .koniec
 	rts
+
+scroll_left .SUBROUTINE			;Przesunięcie wiersza o jeden znak w lewo, po prawej stronie wstawiony pusty znak
+	ldy #$01
+.loop:
+	lda (zero_tmp),y			;W zero_tmp mamy adres poczatku wiersza na ekranie ktory scrollujey
+	dey
+	sta (zero_tmp),y
+	iny
+	iny
+	tya
+	cmp #40
+	bne .loop					;W tej petli mamy przesuniecie o znak w lewo całego wiersza, po prawej stronie dodamy nowy znak
+	lda zero_tmp				;Ukryjemy na stosie adres poczatku wiersza na ekranie
+	pha
+	lda [zero_tmp+1]
+	pha							;Gotowe
+	lda #<wyjscie				; Pod adres zero_tmp wrzucany wskaznik do napisu
+	sta zero_tmp
+	lda #>wyjscie
+	sta [zero_tmp + 1]			; Gotowe
+
+	ldy schowek					;Ładujemy ze schowka indeks napisu (na poczatku 0)
+	lda (zero_tmp),y			;Do akumulatora kolejny znak napisu wyjscia
+	sta [schowek +1]			;Chowamy go na chwile
+	iny
+	lda (zero_tmp),y			;Do akumulatora kolejny znak napisu wyjscia
+	bne .dalej2
+	ldy #0						;Koniec napisu, startujemy od poczatku
+.dalej2:
+	sty schowek					;Zapamietujemy indeks napisu, dla kolejnego wstawiania po prawej
+	pla
+	sta [zero_tmp + 1]
+	pla
+	sta [zero_tmp]				;do zero_tmp adres wiersza
+
+	lda [schowek +1]
+	ldy #39
+	sta (zero_tmp),y
+	rts
+
 przerwanie_1:
-	lda $d011
-	and #%11011111
-	sta $d011			;Enable TXT mode
+	;lda #[$30+1]
+	;sta $0770
+	;lda $d011
+	;and #%11011111
+	;sta $d011			;Enable TXT mode
 	dec xshift
 	lda xshift
 	and #7
+	; Tu sprawdzenie, czy wrzucamy nowy znak, jeśli tak, to wywołanie procedury przesunięcia o jeden znak i dopisania nowego znaku
+	cmp #7
+	bne .dalej
+	lda zero_tmp
+	pha
+	lda [zero_tmp+1]
+	pha
+	lda #<[$400+(40*22)]	;Do zero_tmp adres początku wiersza który scrollujemy
+	sta zero_tmp
+	lda #>[$400+(40*22)]
+	sta [zero_tmp+1]
+	jsr scroll_left
+	pla
+	sta [zero_tmp+1]
+	pla
+	sta zero_tmp
+	lda #7
+.dalej:
 	sta $d016
 	inc $d020
 	lda #255
@@ -411,19 +480,29 @@ przerwanie_1:
 	sta $0315
 	asl $d019
 	jmp $ea81
+
 przerwanie_2:
-	lda $d011
-	and #%11011111
-	sta $d011			;Enable TXT mode
+	;lda $d011
+	;and #%11011111
+	;sta $d011			;Enable TXT mode
 	lda #7
 	sta $d016
 	dec $d020
-	lda #210
+	lda #200
 	sta $d012			;Set the raster line number where interrupt should occur
 	lda #<przerwanie_1
 	sta $0314
 	lda #>przerwanie_1
 	sta $0315
+
+	;ldx #16						; Ustawienie wiersza
+	;ldy #8						; Ustawienie kolumny
+	;lda #<wyjscie				; Pod adres zero_tmp wrzucany wskaznik do napisu
+	;sta zero_tmp
+	;lda #>wyjscie
+	;sta [zero_tmp + 1]
+	;jsr putmsg_xy
+
 	asl $d019
 	jmp $ea31
 
