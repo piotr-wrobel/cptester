@@ -306,7 +306,7 @@ loop_s2:					; petla przepisujaca pod właściwy adres
 	sta $dd0d			;"Switch off" interrupts signals from CIA-2
 	and $d011
 	sta $d011			;Clear most significant bit in VIC's raster register
-	lda #200
+	lda #20
 	sta $d012			;Set the raster line number where interrupt should occur
 	lda #<przerwanie_1	; Pod adres zero_tmp wrzucany wskaznik do napisu
 	sta $0314
@@ -404,7 +404,17 @@ putmsg .SUBROUTINE 			; Wypisanie stringa na ekran od aktualnej pozycji kursora
 .koniec
 	rts
 
+putchar_xy .SUBROUTINE
+	pha
+	clc
+	jsr PLOT
+putchar .SUBROUTINE 			; Wypisanie znaku na ekran od aktualnej pozycji kursora
+	pla
+	jsr CHROUT
+	rts
+
 scroll_left .SUBROUTINE			;Przesunięcie wiersza o jeden znak w lewo, po prawej stronie wstawiony pusty znak
+	pha
 	ldy #$01
 .loop:
 	lda (zero_tmp),y			;W zero_tmp mamy adres poczatku wiersza na ekranie ktory scrollujey
@@ -415,10 +425,6 @@ scroll_left .SUBROUTINE			;Przesunięcie wiersza o jeden znak w lewo, po prawej 
 	tya
 	cmp #40
 	bne .loop					;W tej petli mamy przesuniecie o znak w lewo całego wiersza, po prawej stronie dodamy nowy znak
-	lda zero_tmp				;Ukryjemy na stosie adres poczatku wiersza na ekranie
-	pha
-	lda [zero_tmp+1]
-	pha							;Gotowe
 	lda #<wyjscie				; Pod adres zero_tmp wrzucany wskaznik do napisu
 	sta zero_tmp
 	lda #>wyjscie
@@ -434,25 +440,21 @@ scroll_left .SUBROUTINE			;Przesunięcie wiersza o jeden znak w lewo, po prawej 
 .dalej2:
 	sty schowek					;Zapamietujemy indeks napisu, dla kolejnego wstawiania po prawej
 	pla
-	sta [zero_tmp + 1]
-	pla
-	sta [zero_tmp]				;do zero_tmp adres wiersza
-
+	tax
+	;ldx #16					; Ustawienie wiersza
+	ldy #38						; Ustawienie kolumny
 	lda [schowek +1]
-	ldy #39
-	sta (zero_tmp),y
+	jsr putchar_xy
 	rts
 
 przerwanie_1:
-	;lda #[$30+1]
-	;sta $0770
 	;lda $d011
 	;and #%11011111
-	;sta $d011			;Enable TXT mode
+	;sta $d011				;Enable TXT mode
+	inc $d020
 	dec xshift
 	lda xshift
-	and #7
-	; Tu sprawdzenie, czy wrzucamy nowy znak, jeśli tak, to wywołanie procedury przesunięcia o jeden znak i dopisania nowego znaku
+	and #7					; Tu sprawdzenie, czy wrzucamy nowy znak, jeśli tak, to wywołanie procedury przesunięcia o jeden znak i dopisania nowego znaku
 	cmp #7
 	bne .dalej
 	lda zero_tmp
@@ -463,6 +465,7 @@ przerwanie_1:
 	sta zero_tmp
 	lda #>[$400+(40*22)]
 	sta [zero_tmp+1]
+	lda #22					; Nr wiersza jeszcze do akumulatora
 	jsr scroll_left
 	pla
 	sta [zero_tmp+1]
@@ -471,9 +474,8 @@ przerwanie_1:
 	lda #7
 .dalej:
 	sta $d016
-	inc $d020
 	lda #255
-	sta $d012			;Set the raster line number where interrupt should occur
+	sta $d012				;Set the raster line number where interrupt should occur
 	lda #<przerwanie_2
 	sta $0314
 	lda #>przerwanie_2
@@ -484,25 +486,16 @@ przerwanie_1:
 przerwanie_2:
 	;lda $d011
 	;and #%11011111
-	;sta $d011			;Enable TXT mode
+	;sta $d011				;Enable TXT mode
+	dec $d020
 	lda #7
 	sta $d016
-	dec $d020
-	lda #200
-	sta $d012			;Set the raster line number where interrupt should occur
+	lda #20
+	sta $d012				;Set the raster line number where interrupt should occur
 	lda #<przerwanie_1
 	sta $0314
 	lda #>przerwanie_1
 	sta $0315
-
-	;ldx #16						; Ustawienie wiersza
-	;ldy #8						; Ustawienie kolumny
-	;lda #<wyjscie				; Pod adres zero_tmp wrzucany wskaznik do napisu
-	;sta zero_tmp
-	;lda #>wyjscie
-	;sta [zero_tmp + 1]
-	;jsr putmsg_xy
-
 	asl $d019
 	jmp $ea31
 
