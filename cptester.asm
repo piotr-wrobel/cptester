@@ -445,6 +445,8 @@ przerwanie_1:
 	cmp #7
 	bne .dalej
 	;inc $d020
+	lda #7
+	sta $d016
 	lda TMPZERO
 	pha
 	lda [TMPZERO+1]
@@ -460,9 +462,10 @@ przerwanie_1:
 	pla
 	sta TMPZERO
 	;dec $d020
-	lda #7
+	jmp .dalej3
 .dalej:
 	sta $d016
+.dalej3
 	lda #RASTER_POS_2
 	sta $d012				;Set the raster line number where interrupt should occur
 	lda #<przerwanie_2
