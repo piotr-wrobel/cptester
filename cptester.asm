@@ -1,27 +1,30 @@
  processor 6502				; Procesor 6510, 6502, 8500 - C64
  org $0801
  
-PLOT	= $fff0				; Funkcja PLOT z KERNAL (ustawienie kursora)
-CHROUT	= $ffd2				; Funkcja CHROUT z KERNAL (wypisanie znaku na aktualnej pozycji kursora)
-zero_tmp = $FB				; Miejsce na stronie zerowej, na wskaźnik do wypisywanego stringa
-stop 	= $91				; Adres na mapie C64 - można z niego odczytać status klawisza RUN/STOP #$7F
-stop_pressed	= $7f		; Maska nacisnietego klawisza STOP
-port2 	= $dc00				; Adres Control Port 2
-port1 	= $dc01				; Adres Control Port 1
-cls_code = 147				; Kod czyszczenia ekranu
+PLOT			= $fff0				; Funkcja PLOT z KERNAL (ustawienie kursora)
+CHROUT			= $ffd2				; Funkcja CHROUT z KERNAL (wypisanie znaku na aktualnej pozycji kursora)
+TMPZERO 		= $FB				; Miejsce na stronie zerowej, na wskaźnik do wypisywanego stringa
+STOP_STATUS 	= $91				; Adres na mapie C64 - można z niego odczytać status klawisza RUN/STOP #$7F
+STOP_PRESSED	= $7f				; Maska nacisnietego klawisza STOP
+PORT_2 			= $dc00				; Adres Control Port 2
+PORT_1 			= $dc01				; Adres Control Port 1
+CLS_CODE 		= 147				; Kod czyszczenia ekranu
+RASTER_POS_1 	= 180
+RASTER_POS_2 	= 255
+SCROLL_X_POS	= 22
 
 SPRITES_MEMORY 	= $3200
-SPR_J_C							= [SPRITES_MEMORY/64]
-SPR_J_U							= [SPR_J_C + 1]
-SPR_J_UR						= [SPR_J_C + 2]
-SPR_J_R							= [SPR_J_C + 3]
-SPR_J_DR						= [SPR_J_C + 4]
-SPR_J_D							= [SPR_J_C + 5]
-SPR_J_DL						= [SPR_J_C + 6]
-SPR_J_L							= [SPR_J_C + 7]
-SPR_J_UL						= [SPR_J_C + 8]
-SPR_J_FIRE						= [SPR_J_C + 9]
-SPR_J_ERR						= [SPR_J_C + 10]
+SPR_J_C			= [SPRITES_MEMORY/64]
+SPR_J_U			= [SPR_J_C + 1]
+SPR_J_UR		= [SPR_J_C + 2]
+SPR_J_R			= [SPR_J_C + 3]
+SPR_J_DR		= [SPR_J_C + 4]
+SPR_J_D			= [SPR_J_C + 5]
+SPR_J_DL		= [SPR_J_C + 6]
+SPR_J_L			= [SPR_J_C + 7]
+SPR_J_UL		= [SPR_J_C + 8]
+SPR_J_FIRE		= [SPR_J_C + 9]
+SPR_J_ERR		= [SPR_J_C + 10]
 
 MULTICOLOR_ON		= $d01c
 MULTICOLOR_R1 		= $d025
@@ -177,7 +180,7 @@ joy_error_data:
 	.DC $33,$33,$c3,$33,$33,$ff,$ff,$ff
 	.DC $ff,$ff,$ff,$7f,$ff,$fd,$3f,$ff
 	.DC $fc,$1f,$ff,$f4,$07,$ff,$d0,$8e
-mapa_joy:													; Mapa banków z danymi do sprites
+mapa_joy:										; Mapa banków z danymi do sprites
 	.DC SPR_J_C, SPR_J_U, SPR_J_D, SPR_J_ERR, SPR_J_L, SPR_J_UL, SPR_J_DL, SPR_J_ERR, SPR_J_R, SPR_J_UR, SPR_J_DR, SPR_J_ERR, SPR_J_ERR, SPR_J_ERR, SPR_J_ERR, SPR_J_ERR
 powitanie:
 	.DC "*** CPTESTER V6.0 ***",0				; Napisy na ekranie
@@ -190,59 +193,43 @@ xshift:
 kolor_tla:
 	.DC $00
 schowek:
-	.WORD #0000
+	.DC $00,$00
 
 ; *********** Kod programu *************  
 asmstart:  
 	lda $d020
 	sta kolor_tla
-	lda #cls_code				; Czyszczenie ekranu inline
+	lda #CLS_CODE				; Czyszczenie ekranu inline
 	jsr CHROUT
 	ldx #2						; Ustawienie wiersza
 	ldy #9						; Ustawienie kolumny
-	lda #<powitanie				; Pod adres zero_tmp wrzucany wskaznik do napisu
-	sta zero_tmp
+	lda #<powitanie				; Pod adres TMPZERO wrzucany wskaznik do napisu
+	sta TMPZERO
 	lda #>powitanie
-	sta [zero_tmp + 1]
+	sta [TMPZERO + 1]
 	jsr putmsg_xy
 	ldx #5						; Ustawienie wiersza
 	ldy #10						; Ustawienie kolumny
-	lda #<opis					; Pod adres zero_tmp wrzucany wskaznik do napisu
-	sta zero_tmp
+	lda #<opis					; Pod adres TMPZERO wrzucany wskaznik do napisu
+	sta TMPZERO
 	lda #>opis
-	sta [zero_tmp + 1]
+	sta [TMPZERO + 1]
 	jsr putmsg_xy  
-	ldx #17						; Ustawienie wiersza
-	ldy #8							; Ustawienie kolumny
-	lda #<wyjscie				; Pod adres zero_tmp wrzucany wskaznik do napisu
-	sta zero_tmp
-	lda #>wyjscie
-	sta [zero_tmp + 1]
-	jsr putmsg_xy
-	;ldx #22						; Ustawienie wiersza
-	;ldy #8						; Ustawienie kolumny
-	;lda #<wyjscie				; Pod adres zero_tmp wrzucany wskaznik do napisu
-	;sta zero_tmp
-	;lda #>wyjscie
-	;sta [zero_tmp + 1]
-	;jsr putmsg_xy
 
 ; Skopiowanie Sprites do właściwej lokalizacji w pamięci
-
 	ldx #$00				; 256 bajtów do przepisania ! :)
+	stx schowek				; to jest oderwane od kontekstu, ale służy wyzerowaniu jednej komórki, użytej do scrolowania napisu
 loop_s0:					; petla przepisujaca pod właściwy adres
 	lda joy_c_data,x
 	sta SPRITES_MEMORY,x
 	inx
 	bne loop_s0
-
 	ldx #$00				; 256 bajtów do przepisania ! :)
 loop_s1:					; petla przepisujaca pod właściwy adres
 	lda joy_dr_data,x
 	sta [SPRITES_MEMORY+[4*64]],x
 	inx
 	bne loop_s1
-
 	ldx #$00				; 192 bajty do przepisania ! :)
 loop_s2:					; petla przepisujaca pod właściwy adres
 	lda joy_ul_data,x
@@ -252,7 +239,6 @@ loop_s2:					; petla przepisujaca pod właściwy adres
 	bne loop_s2
 
 ; Ustawienie wyświetlania Sprites
-
 	lda #SPRITES_MCOLOR1				; sprite multicolor 1
 	sta MULTICOLOR_R1
 	lda #SPRITES_MCOLOR2				; sprite multicolor 2
@@ -296,9 +282,9 @@ loop_s2:					; petla przepisujaca pod właściwy adres
 	sta MULTICOLOR_ON
 
 	lda #<mapa_joy						; Młodszy bajt adresu mapy  banków sprite
-	sta zero_tmp							; Zapisujemy na strone zerową
+	sta TMPZERO							; Zapisujemy na strone zerową
 	lda #>mapa_joy						; Starszy bajt adresu mapy banków sprite
-	sta [zero_tmp +1]						; Zapisujemy na strone zerowa
+	sta [TMPZERO +1]					; Zapisujemy na strone zerowa
 ; Ustawienie przerwania
 	sei
 	lda #%01111111
@@ -306,9 +292,9 @@ loop_s2:					; petla przepisujaca pod właściwy adres
 	sta $dd0d			;"Switch off" interrupts signals from CIA-2
 	and $d011
 	sta $d011			;Clear most significant bit in VIC's raster register
-	lda #20
+	lda #RASTER_POS_1
 	sta $d012			;Set the raster line number where interrupt should occur
-	lda #<przerwanie_1	; Pod adres zero_tmp wrzucany wskaznik do napisu
+	lda #<przerwanie_1	; Pod adres TMPZERO wrzucany wskaznik do napisu
 	sta $0314
 	lda #>przerwanie_1
 	sta $0315
@@ -320,15 +306,15 @@ loop_s2:					; petla przepisujaca pod właściwy adres
 	cli
 loop:  											; Pętla główna
 ; Port 1
-	lda port1									; Do akumlatora wartosc portu 1
+	lda PORT_1									; Do akumlatora wartosc portu 1
 	eor #$1f
 	tax											; Robimy sobie kopie w rej X
 	and #$0f									; Zostawiamy najmlodsze 4 bity (4 kierunki JOYA)
 	tay											; Wrzucamy to do rej Y, przyda sie do zaindeksowania adresu banku sprite
-	lda (zero_tmp),y						; Mamy poprawny bank dla sprite nr 0
-	sta SPRITE0_POINTER			; No i go wyswietlamy ! :)
-	lda SPRITE_VISIBLE_R			; Do rej A wyswietlane sprite'y
-	and #[SPRITE_0 + SPRITE_2 + SPRITE_3]					; Zostawimy wszystkie oprocz sprite 1 (fire dla port 1)
+	lda (TMPZERO),y								; Mamy poprawny bank dla sprite nr 0
+	sta SPRITE0_POINTER							; No i go wyswietlamy ! :)
+	lda SPRITE_VISIBLE_R						; Do rej A wyswietlane sprite'y
+	and #[SPRITE_0 + SPRITE_2 + SPRITE_3]		; Zostawimy wszystkie oprocz sprite 1 (fire dla port 1)
 	tay											; Co  sobie zapamietamy w rej Y
 	txa											; Do A zapamiętany w X port_1 już zanegowany
 	and #$10									; Czy jest aktywny fire ?
@@ -341,15 +327,15 @@ aktualizuj_j1:
 gotowy_j1:
 	sta SPRITE_VISIBLE_R
 ;Port 2
-	lda port2									; Do akumlatora wartosc portu 1
+	lda PORT_2									; Do akumlatora wartosc portu 1
 	eor #$1f
 	tax											; Robimy sobie kopie w rej X
 	and #$0f									; Zostawiamy najmlodsze 4 bity (4 kierunki JOYA)
 	tay											; Wrzucamy to do rej Y, przyda sie do zaindeksowania adresu banku sprite
-	lda (zero_tmp),y						; Mamy poprawny bank dla sprite nr 0
-	sta [SPRITE0_POINTER+2]		; No i go wyswietlamy ! :)
-	lda SPRITE_VISIBLE_R			; Do rej A wyswietlane sprite'y
-	and #[SPRITE_0 + SPRITE_1+ SPRITE_2]					;Zostawimy wszystkie oprocz sprite 3 (fire dla port 2)
+	lda (TMPZERO),y								; Mamy poprawny bank dla sprite nr 0
+	sta [SPRITE0_POINTER+2]						; No i go wyswietlamy ! :)
+	lda SPRITE_VISIBLE_R						; Do rej A wyswietlane sprite'y
+	and #[SPRITE_0 + SPRITE_1+ SPRITE_2]		;Zostawimy wszystkie oprocz sprite 3 (fire dla port 2)
 	tay											; Co  sobie zapamietamy w rej Y
 	txa											; Do A zapamiętany w X port_1 już zanegowany
 	and #$10									; Czy jest aktywny fire ?
@@ -361,9 +347,8 @@ aktualizuj_j2:
 	tya
 gotowy_j2:
 	sta SPRITE_VISIBLE_R
-
-	lda stop
-	cmp #stop_pressed
+	lda STOP_STATUS
+	cmp #STOP_PRESSED
 	beq koniec
 	jmp loop
 
@@ -385,7 +370,7 @@ koniec:
 	sta $d016
 	lda kolor_tla
 	sta $d020
-	lda #cls_code					; Czyszczenie ekranu inline
+	lda #CLS_CODE					; Czyszczenie ekranu inline
 	jmp CHROUT						; Skok do funkcji KERNALA, ta zakończy się RTS i wyjście do BASICA
   
 ; ********** Funkcje dodatkowe *******************
@@ -396,7 +381,7 @@ putmsg_xy .SUBROUTINE		; Wypisanie stringa na ekran od zdefiniowanej X,Y pozycji
 putmsg .SUBROUTINE 			; Wypisanie stringa na ekran od aktualnej pozycji kursora
 	ldy #$00
 .loop: 
-	lda (zero_tmp),y
+	lda (TMPZERO),y
 	beq .koniec
 	jsr CHROUT
 	iny
@@ -417,85 +402,91 @@ scroll_left .SUBROUTINE			;Przesunięcie wiersza o jeden znak w lewo, po prawej 
 	pha
 	ldy #$01
 .loop:
-	lda (zero_tmp),y			;W zero_tmp mamy adres poczatku wiersza na ekranie ktory scrollujey
+	lda (TMPZERO),y				;W TMPZERO mamy adres poczatku wiersza na ekranie ktory scrollujey
 	dey
-	sta (zero_tmp),y
+	sta (TMPZERO),y
 	iny
 	iny
 	tya
 	cmp #40
 	bne .loop					;W tej petli mamy przesuniecie o znak w lewo całego wiersza, po prawej stronie dodamy nowy znak
-	lda #<wyjscie				; Pod adres zero_tmp wrzucany wskaznik do napisu
-	sta zero_tmp
+	lda #<wyjscie				;Pod adres TMPZERO wrzucany wskaznik do napisu
+	sta TMPZERO
 	lda #>wyjscie
-	sta [zero_tmp + 1]			; Gotowe
-
+	sta [TMPZERO + 1]			;Gotowe
 	ldy schowek					;Ładujemy ze schowka indeks napisu (na poczatku 0)
-	lda (zero_tmp),y			;Do akumulatora kolejny znak napisu wyjscia
+	lda (TMPZERO),y				;Do akumulatora kolejny znak napisu wyjscia
 	sta [schowek +1]			;Chowamy go na chwile
 	iny
-	lda (zero_tmp),y			;Do akumulatora kolejny znak napisu wyjscia
+	lda (TMPZERO),y				;Do akumulatora kolejny znak napisu wyjscia
 	bne .dalej2
 	ldy #0						;Koniec napisu, startujemy od poczatku
 .dalej2:
 	sty schowek					;Zapamietujemy indeks napisu, dla kolejnego wstawiania po prawej
 	pla
 	tax
-	;ldx #16					; Ustawienie wiersza
-	ldy #38						; Ustawienie kolumny
+	;inc $d021					;DEBUG
+	ldy #38						;Ustawienie kolumny
 	lda [schowek +1]
 	jsr putchar_xy
+	;dec $d021					;DEBUG
 	rts
 
+; ****************** Przerwania **********************
+
 przerwanie_1:
+	sei
 	;lda $d011
 	;and #%11011111
 	;sta $d011				;Enable TXT mode
-	inc $d020
 	dec xshift
 	lda xshift
 	and #7					; Tu sprawdzenie, czy wrzucamy nowy znak, jeśli tak, to wywołanie procedury przesunięcia o jeden znak i dopisania nowego znaku
 	cmp #7
 	bne .dalej
-	lda zero_tmp
+	;inc $d020
+	lda TMPZERO
 	pha
-	lda [zero_tmp+1]
+	lda [TMPZERO+1]
 	pha
-	lda #<[$400+(40*22)]	;Do zero_tmp adres początku wiersza który scrollujemy
-	sta zero_tmp
-	lda #>[$400+(40*22)]
-	sta [zero_tmp+1]
-	lda #22					; Nr wiersza jeszcze do akumulatora
+	lda #<[$400+(40*SCROLL_X_POS)]	;Do TMPZERO adres początku wiersza który scrollujemy
+	sta TMPZERO
+	lda #>[$400+(40*SCROLL_X_POS)]
+	sta [TMPZERO+1]
+	lda #SCROLL_X_POS				; Nr wiersza jeszcze do akumulatora
 	jsr scroll_left
 	pla
-	sta [zero_tmp+1]
+	sta [TMPZERO+1]
 	pla
-	sta zero_tmp
+	sta TMPZERO
+	;dec $d020
 	lda #7
 .dalej:
 	sta $d016
-	lda #255
+	lda #RASTER_POS_2
 	sta $d012				;Set the raster line number where interrupt should occur
 	lda #<przerwanie_2
 	sta $0314
 	lda #>przerwanie_2
 	sta $0315
 	asl $d019
+	cli
 	jmp $ea81
 
 przerwanie_2:
+	sei
 	;lda $d011
 	;and #%11011111
 	;sta $d011				;Enable TXT mode
-	dec $d020
 	lda #7
 	sta $d016
-	lda #20
+	lda #RASTER_POS_1
 	sta $d012				;Set the raster line number where interrupt should occur
 	lda #<przerwanie_1
 	sta $0314
 	lda #>przerwanie_1
 	sta $0315
 	asl $d019
+	cli
 	jmp $ea31
 
