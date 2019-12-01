@@ -183,7 +183,7 @@ joy_error_data:
 mapa_joy:										; Mapa banków z danymi do sprites
 	.DC SPR_J_C, SPR_J_U, SPR_J_D, SPR_J_ERR, SPR_J_L, SPR_J_UL, SPR_J_DL, SPR_J_ERR, SPR_J_R, SPR_J_UR, SPR_J_DR, SPR_J_ERR, SPR_J_ERR, SPR_J_ERR, SPR_J_ERR, SPR_J_ERR
 powitanie:
-	.DC "*** CPTESTER V6.0 ***",0				; Napisy na ekranie
+	.DC "*** CPTESTER V6.1 ***",0				; Napisy na ekranie
 opis
 	.DC "PORT #1     PORT #2",0
 wyjscie:
@@ -288,21 +288,21 @@ loop_s2:					; petla przepisujaca pod właściwy adres
 ; Ustawienie przerwania
 	sei
 	lda #%01111111
-	sta $dc0d			;"Switch off" interrupts signals from CIA-1
-	sta $dd0d			;"Switch off" interrupts signals from CIA-2
+	sta $dc0d			; Wyłączenie przerwań od CIA-1
+	sta $dd0d			; Wyłączenie przerwań od CIA-2
 	and $d011
-	sta $d011			;Clear most significant bit in VIC's raster register
+	sta $d011			; Wyczyszczenie najbardziej znaczącego bitu rastra przerwania (9 bitu)
 	lda #RASTER_POS_1
-	sta $d012			;Set the raster line number where interrupt should occur
+	sta $d012			; Ustawienie rastra przerwania
 	lda #<przerwanie_1	; Pod adres TMPZERO wrzucany wskaznik do napisu
 	sta $0314
 	lda #>przerwanie_1
 	sta $0315
 	lda $d01a
 	ora #%00000001
-	sta $d01a			;Enable raster interrupt signals from VIC
-	lda $dc0d			;Skasowanie ewentualnych przerwań które się pojawiły w międzyczasie od CIA-1
-	lda $dd0d			;Skasowanie ewentualnych przerwań które się pojawiły w międzyczasie od CIA-2
+	sta $d01a			; Włączenie przerwań od VIC
+	lda $dc0d			; Skasowanie ewentualnych przerwań które się pojawiły w międzyczasie od CIA-1
+	lda $dd0d			; Skasowanie ewentualnych przerwań które się pojawiły w międzyczasie od CIA-2
 	cli
 loop:  											; Pętla główna
 ; Port 1
@@ -327,7 +327,7 @@ aktualizuj_j1:
 gotowy_j1:
 	sta SPRITE_VISIBLE_R
 ;Port 2
-	lda PORT_2									; Do akumlatora wartosc portu 1
+	lda PORT_2									; Do akumlatora wartosc portu 2
 	eor #$1f
 	tax											; Robimy sobie kopie w rej X
 	and #$0f									; Zostawiamy najmlodsze 4 bity (4 kierunki JOYA)
@@ -359,10 +359,10 @@ koniec:
 	lda #$ea
 	sta $0315
 	lda #%10000001
-	sta $dc0d			;"Switch ON" interrupts signals from CIA-1
+	sta $dc0d			; Włączenie przerwań od CIA-1
 	lda $d01a
 	and #%11111110
-	sta $d01a			;Enable raster interrupt signals from VIC
+	sta $d01a			; Wyłączenie przerwań od VIC
 	cli
 	lda #$00
 	sta SPRITE_VISIBLE_R
@@ -398,38 +398,38 @@ putchar .SUBROUTINE 			; Wypisanie znaku na ekran od aktualnej pozycji kursora
 	jsr CHROUT
 	rts
 
-scroll_left .SUBROUTINE			;Przesunięcie wiersza o jeden znak w lewo, po prawej stronie wstawiony pusty znak
+scroll_left .SUBROUTINE			; Przesunięcie wiersza o jeden znak w lewo, po prawej stronie wstawiony pusty znak
 	pha
 	ldy #$01
 .loop:
-	lda (TMPZERO),y				;W TMPZERO mamy adres poczatku wiersza na ekranie ktory scrollujey
+	lda (TMPZERO),y				; W TMPZERO mamy adres poczatku wiersza na ekranie ktory scrollujey
 	dey
 	sta (TMPZERO),y
 	iny
 	iny
 	tya
 	cmp #40
-	bne .loop					;W tej petli mamy przesuniecie o znak w lewo całego wiersza, po prawej stronie dodamy nowy znak
-	lda #<wyjscie				;Pod adres TMPZERO wrzucany wskaznik do napisu
+	bne .loop					; W tej petli mamy przesuniecie o znak w lewo całego wiersza, po prawej stronie dodamy nowy znak
+	lda #<wyjscie				; Pod adres TMPZERO wrzucany wskaznik do napisu
 	sta TMPZERO
 	lda #>wyjscie
-	sta [TMPZERO + 1]			;Gotowe
-	ldy schowek					;Ładujemy ze schowka indeks napisu (na poczatku 0)
-	lda (TMPZERO),y				;Do akumulatora kolejny znak napisu wyjscia
-	sta [schowek +1]			;Chowamy go na chwile
+	sta [TMPZERO + 1]			; Gotowe
+	ldy schowek					; Ładujemy ze schowka indeks napisu (na poczatku 0)
+	lda (TMPZERO),y				; Do akumulatora kolejny znak napisu wyjscia
+	sta [schowek +1]			; Chowamy go na chwile
 	iny
-	lda (TMPZERO),y				;Do akumulatora kolejny znak napisu wyjscia
-	bne .dalej2
-	ldy #0						;Koniec napisu, startujemy od poczatku
-.dalej2:
-	sty schowek					;Zapamietujemy indeks napisu, dla kolejnego wstawiania po prawej
+	lda (TMPZERO),y				; Do akumulatora kolejny znak napisu wyjscia
+	bne .dalej
+	ldy #0						; Koniec napisu, startujemy od poczatku
+.dalej:
+	sty schowek					; Zapamietujemy indeks napisu, dla kolejnego wstawiania po prawej
 	pla
 	tax
-	;inc $d021					;DEBUG
-	ldy #38						;Ustawienie kolumny
+	;inc $d021					; DEBUG
+	ldy #38						; Ustawienie kolumny
 	lda [schowek +1]
 	jsr putchar_xy
-	;dec $d021					;DEBUG
+	;dec $d021					; DEBUG
 	rts
 
 ; ****************** Przerwania **********************
@@ -438,37 +438,37 @@ przerwanie_1:
 	sei
 	;lda $d011
 	;and #%11011111
-	;sta $d011				;Enable TXT mode
+	;sta $d011				; Enable TXT mode
 	dec xshift
 	lda xshift
 	and #7					; Tu sprawdzenie, czy wrzucamy nowy znak, jeśli tak, to wywołanie procedury przesunięcia o jeden znak i dopisania nowego znaku
 	cmp #7
-	bne .dalej
-	;inc $d020
+	bne .dalej2
+	;inc $d020				; DEBUG
 	lda #7
 	sta $d016
 	lda TMPZERO
 	pha
 	lda [TMPZERO+1]
 	pha
-	lda #<[$400+(40*SCROLL_X_POS)]	;Do TMPZERO adres początku wiersza który scrollujemy
+	lda #<[$400+(40*SCROLL_X_POS)]	; Do TMPZERO adres początku wiersza który scrollujemy
 	sta TMPZERO
 	lda #>[$400+(40*SCROLL_X_POS)]
 	sta [TMPZERO+1]
 	lda #SCROLL_X_POS				; Nr wiersza jeszcze do akumulatora
-	jsr scroll_left
+	jsr scroll_left					; Scrollujemy ekran o jeden znak w lewo
 	pla
 	sta [TMPZERO+1]
 	pla
 	sta TMPZERO
-	;dec $d020
+	;dec $d020				; DEBUG
 	jmp .dalej3
-.dalej:
+.dalej2:
 	sta $d016
 .dalej3
 	lda #RASTER_POS_2
-	sta $d012				;Set the raster line number where interrupt should occur
-	lda #<przerwanie_2
+	sta $d012				; Nowy raster przerwania
+	lda #<przerwanie_2		; Nowy wektor przerwania
 	sta $0314
 	lda #>przerwanie_2
 	sta $0315
@@ -480,12 +480,12 @@ przerwanie_2:
 	sei
 	;lda $d011
 	;and #%11011111
-	;sta $d011				;Enable TXT mode
-	lda #7
+	;sta $d011				; Enable TXT mode
+	lda #7					; Zerujemy przesunięcie ekranu
 	sta $d016
 	lda #RASTER_POS_1
-	sta $d012				;Set the raster line number where interrupt should occur
-	lda #<przerwanie_1
+	sta $d012				; Nowy raster przerwania
+	lda #<przerwanie_1		; Nowy wektor przerwania
 	sta $0314
 	lda #>przerwanie_1
 	sta $0315
