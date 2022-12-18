@@ -183,7 +183,7 @@ joy_error_data:
 mapa_joy:										; Mapa banków z danymi do sprites
 	.DC SPR_J_C, SPR_J_U, SPR_J_D, SPR_J_ERR, SPR_J_L, SPR_J_UL, SPR_J_DL, SPR_J_ERR, SPR_J_R, SPR_J_UR, SPR_J_DR, SPR_J_ERR, SPR_J_ERR, SPR_J_ERR, SPR_J_ERR, SPR_J_ERR
 powitanie:
-	.DC "*** CPTESTER V6.1 ***",0				; Napisy na ekranie
+	.DC "*** CPTESTER V6.2 ***",0				; Napisy na ekranie
 opis
 	.DC "PORT #1     PORT #2",0
 wyjscie:
